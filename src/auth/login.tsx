@@ -3,13 +3,11 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase'; // Make sure this path is correct and supabase client is initialized
+import { useNavigate } from 'react-router-dom';
 
 // Import common layout components from App.tsx context (these are likely for the login page's own layout)
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { PlayerProvider } from "@/components/player/PlayerProvider";
-
-import { useLocation } from '@/hooks/useLocation'; // Assuming this hook provides 'navigate'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,7 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { navigate } = useLocation(); // Destructure navigate from useLocation
+  const navigate = useNavigate();
 
   // Define which roles go to which section
   const rightsHoldersRoles = ['independent-artist', 'signed-artist', 'label', 'publisher'];
@@ -28,50 +26,57 @@ export default function LoginPage() {
     setLoading(true);
     setError(null); // Clear previous errors
 
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Attempting login with email:', email);
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
       });
 
       if (authError) {
-        setError(authError.message);
         console.error("Login error:", authError.message);
-      } else if (data.user && data.session) {
-        // Login successful, now determine redirection based on role
-        const userRole = data.user.user_metadata?.role; // Access the role from user_metadata
+        setError(authError.message);
+        return;
+      }
 
-        console.log("User role detected from Supabase metadata:", userRole);
+      if (!data?.user || !data?.session) {
+        console.error("No user or session data returned");
+        setError("Login failed. Please try again.");
+        return;
+      }
 
-        if (userRole) {
-          if (rightsHoldersRoles.includes(userRole)) {
-            console.log(`Redirecting user with role '${userRole}' to /tracks (Catalog Management)`);
-            navigate('/tracks'); // <--- CRITICAL CHANGE: Redirect to /tracks
-          } else if (licensorsRoles.includes(userRole)) {
-            console.log(`Redirecting user with role '${userRole}' to /licensors (Discover Music)`);
-            navigate('/licensors');
-          } else {
-            // Fallback for an unrecognized role (shouldn't happen if roles are consistent)
-            console.warn("User logged in with an unrecognized role:", userRole);
-            setError("Login successful, but your role could not be recognized for redirection. Please contact support.");
-            navigate('/discover'); // Redirect to a default page if role is unknown
-          }
+      // Login successful, now determine redirection based on role
+      const userRole = data.user.user_metadata?.role;
+      console.log("User role detected:", userRole);
+
+      if (userRole) {
+        if (rightsHoldersRoles.includes(userRole)) {
+          console.log(`Redirecting to /tracks (Catalog Management)`);
+          navigate('/tracks');
+        } else if (licensorsRoles.includes(userRole)) {
+          console.log(`Redirecting to /licensors (Discover Music)`);
+          navigate('/licensors');
         } else {
-          // Fallback if role is missing in user_metadata (should not happen if signup works)
-          console.warn("User role not found in metadata after successful login.");
-          setError("Login successful, but your profile information is incomplete. Please contact support.");
-          navigate('/discover'); // Redirect to a default page if role is missing
+          console.warn("Unrecognized role:", userRole);
+          setError("Login successful, but your role could not be recognized. Please contact support.");
+          navigate('/discover');
         }
       } else {
-        // This case should theoretically not be hit if authError is null and data.user/session are also null
-        setError("An unexpected response received from login service.");
-        console.error("Unexpected login result:", data);
+        console.warn("No role found in metadata");
+        setError("Login successful, but your profile is incomplete. Please contact support.");
+        navigate('/discover');
       }
     } catch (err) {
-      console.error("An unexpected error occurred during login:", err);
+      console.error("Unexpected error during login:", err);
       setError("An unexpected error occurred. Please try again.");
     } finally {
-      setLoading(false); // Ensure loading is set to false in all cases
+      setLoading(false);
     }
   };
 
@@ -107,25 +112,42 @@ export default function LoginPage() {
               />
             </div>
 
-            {error && <p className="text-destructive text-sm">{error}</p>}
+            {error && (
+              <div className="bg-destructive/10 text-destructive px-4 py-2 rounded-md text-sm">
+                {error}
+              </div>
+            )}
 
             <Button
               type="submit"
               disabled={loading || !email || !password}
-              className="w-full"
+              className="w-full mb-4"
             >
               {loading ? 'Logging in...' : 'Log In'}
             </Button>
-          </form>
 
-          <p className="mt-4 text-sm text-muted-foreground">
-            Don't have an account? {' '}
-            <a href="/auth/signup" className="text-primary hover:underline">
-              Sign up
-            </a>
-          </p>
+            <div className="text-sm text-center space-y-4">
+              <button 
+                onClick={() => navigate('/auth/reset-password')}
+                type="button"
+                className="text-primary hover:underline block w-full"
+              >
+                Forgot your password?
+              </button>
+
+              <div className="text-muted-foreground">
+                Don't have an account? {' '}
+                <button 
+                  onClick={() => navigate('/auth/signup')} 
+                  type="button"
+                  className="text-primary hover:underline"
+                >
+                  Sign up
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
-        <PlayerProvider />
       </TooltipProvider>
     </ThemeProvider>
   );

@@ -55,38 +55,35 @@ export const mapSupabaseTrackToLocalTrack = (supabaseTrackData: any): Track => {
 
   // Construct the status object, ensuring all required sub-properties are present
   const status = {
-    phase: supabaseTrackData.status?.phase || "recording",
-    clearance: supabaseTrackData.status?.clearance || { industries: [], restrictedCountries: [] },
-    monetization: supabaseTrackData.status?.monetization ?? false,
-    public: supabaseTrackData.status?.public ?? false,
-    approvals: supabaseTrackData.status?.approvals || [],
-    progress: supabaseTrackData.status?.progress || 0,
+    phase: "recording" as const,
+    clearance: { industries: [] as string[], restrictedCountries: [] as string[] },
+    monetization: false,
+    public: false,
+    approvals: [],
+    progress: 0,
   };
 
+  // Map the database fields to the Track interface
   return {
-    id: supabaseTrackData.id, // Supabase ID is a string (UUID)
+    id: supabaseTrackData.id,
     title: supabaseTrackData.title || "Untitled Track",
     artist: supabaseTrackData.artist_id || "Unknown Artist",
     audio_url: supabaseTrackData.audio_url || "",
     is_published: supabaseTrackData.is_published ?? false,
     created_at: supabaseTrackData.created_at || new Date().toISOString(),
-
-    genre: supabaseTrackData.genre || "Uncategorized",
+    genre: Array.isArray(supabaseTrackData.genre) && supabaseTrackData.genre.length > 0 
+      ? supabaseTrackData.genre[0] 
+      : "Uncategorized",
     key: supabaseTrackData.key || "C Major",
     bpm: supabaseTrackData.bpm || 0,
-    duration: supabaseTrackData.duration || "0:00",
-    metadata: {
-      ...defaultMetadata,
-      ...supabaseTrackData.metadata,
-    },
-    tags: supabaseTrackData.tags || [],
-    writers: supabaseTrackData.writers || [],
-    lyrics: supabaseTrackData.lyrics || "",
-
-    mixes: supabaseTrackData.mixes,
-    parentTrackId: supabaseTrackData.parentTrackId,
-    syncInfo: supabaseTrackData.syncInfo || defaultSyncInfo,
+    duration: supabaseTrackData.duration?.toString() || "0:00",
+    metadata: defaultMetadata,
+    tags: [],
+    writers: [],
+    lyrics: "",
+    mixes: [],
+    syncInfo: defaultSyncInfo,
     status: status,
-    rights: supabaseTrackData.rights || { writers: [], publishers: [], masterOwners: [] },
+    rights: { writers: [], publishers: [], masterOwners: [] },
   };
 };

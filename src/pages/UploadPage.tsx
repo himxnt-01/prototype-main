@@ -19,9 +19,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from '@/lib/supabase';
 import { useLocation } from "@/hooks/useLocation";
 import { useDraftsStore } from "@/lib/drafts";
-import { createDummyDraft } from "@/lib/upload/utils/draft"; // <--- CORRECTED PATH: src/lib/upload/utils/draft.ts
-import { mapSupabaseTrackToLocalTrack } from "@/lib/upload/utils/track-mapper"; // <--- NEW & CORRECTED PATH
-
+import { createDummyDraft } from "@/lib/upload/utils/draft";
+import { mapSupabaseTrackToLocalTrack } from "@/lib/upload/utils/track-mapper";
 import { v4 as uuidv4 } from 'uuid';
 
 // Cloudinary configuration
@@ -30,8 +29,8 @@ import { ClientSideDummyDraft } from "@/types/track";
 
 // Define the upload file type
 interface UploadFile {
-  id: string; // Client-side unique ID for managing files in UI
-  trackId?: string; // Supabase track UUID (after successful DB insert)
+  id: string;
+  trackId?: string;
   file: File;
   name: string;
   size: number;
@@ -40,7 +39,7 @@ interface UploadFile {
   errorMessage?: string;
   storagePath?: string;
   audioUrl?: string;
-  clientDummyData?: ClientSideDummyDraft; // To hold initial dummy data if needed
+  clientDummyData?: ClientSideDummyDraft;
 }
 
 export function UploadPage() {
@@ -74,7 +73,6 @@ export function UploadPage() {
     }
   });
 
-  // 🔥 CLOUDINARY UPLOAD FUNCTION - No more Supabase storage issues!
   const uploadToSupabase = async (file: UploadFile) => {
     console.log('🚀 Starting Cloudinary upload for:', file.name);
     
@@ -104,14 +102,14 @@ export function UploadPage() {
     try {
       const trackId = uuidv4();
 
-      // 🔥 CLOUDINARY UPLOAD
+      // Upload to Cloudinary
       console.log('☁️ Uploading to Cloudinary...');
       
       const formData = new FormData();
       formData.append('file', file.file);
-      formData.append('upload_preset', 'unsigned_preset'); // We'll create this in Cloudinary
-      formData.append('resource_type', 'auto'); // Handles audio files
-      formData.append('public_id', `tracks/${userUid}/${trackId}`); // Organized folder structure
+      formData.append('upload_preset', 'unsigned_preset');
+      formData.append('resource_type', 'auto');
+      formData.append('public_id', `tracks/${userUid}/${trackId}`);
 
       const cloudinaryResponse = await fetch(CLOUDINARY_UPLOAD_URL, {
         method: 'POST',
@@ -137,69 +135,53 @@ export function UploadPage() {
         )
       );
 
-      // 🔥 TEMPORARY: Skip database insert due to Supabase config issue
-      console.log('⚠️ Skipping database insert due to Supabase configuration error');
-      console.log('✅ File uploaded successfully to Cloudinary:', audioUrl);
-
-      // Update to complete
-      setFiles(prev =>
-        prev.map(f =>
-          f.id === file.id
-            ? {
-                ...f,
-                status: 'complete',
-                progress: 100,
-                trackId: trackId,
-                audioUrl: audioUrl
-              }
-            : f
-        )
-      );
-
-      console.log('🎉 Upload complete! (Database insert disabled temporarily)');
-
-       
-      
+      // Insert into Supabase database with proper data structure
       console.log('💾 Starting database insert...');
+      
+      // Create a minimal track object with only essential fields
       const trackData = {
         id: trackId,
-        title: file.name,
+        title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
         artist_id: userUid,
         audio_url: audioUrl,
-        is_published: false,
-        explicit_content: false,
-        duration: null,
-        bpm: null,
-        genre: [],
-        key: null,
-        cover_art_url: null,
-        instruments: null,
-        vocal_type: null,
-        album_id: null,
-        label_id: null,
-        analysis_status: "pending"
+        is_published: false
       };
 
+      // Try a simpler insert approach
       const { data: trackInsertData, error: trackInsertError } = await supabase
         .from('tracks')
         .insert(trackData)
-        .select();
-
-      console.log('💾 Database insert result:', { trackInsertData, trackInsertError });
+        .select()
+        .single();
 
       if (trackInsertError) {
+        console.error('Database insert error:', trackInsertError);
         throw new Error(`Database error: ${trackInsertError.message}`);
       }
 
       console.log('✅ Database insert successful!');
 
-      // Update local drafts
-      if (trackInsertData && trackInsertData.length > 0) {
-        const newDraft = mapSupabaseTrackToLocalTrack(trackInsertData[0]);
+      // Update local state and drafts
+      if (trackInsertData) {
+        const newDraft = mapSupabaseTrackToLocalTrack(trackInsertData);
         setDrafts([newDraft, ...drafts]);
-        console.log('🎉 COMPLETE SUCCESS with Cloudinary!');
+        
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === file.id
+              ? {
+                  ...f,
+                  status: 'complete',
+                  progress: 100,
+                  trackId: trackInsertData.id,
+                  audioUrl: audioUrl
+                }
+              : f
+          )
+        );
+        
+        console.log('🎉 Upload complete with successful database insert!');
       }
-      
 
     } catch (error) {
       console.error('💥 Upload error:', error);
@@ -279,38 +261,24 @@ export function UploadPage() {
     setFiles([]);
   };
 
-  // 🔥 FIXED TEST FUNCTION with correct array format for genre
   const testDatabaseInsert = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const userUid = session?.user?.id;
     
     console.log('🧪 User ID for test:', userUid);
     
-    // ✅ CORRECT DATA STRUCTURE with genre as array
     const testTrack = {
       id: uuidv4(),
       title: "Test Track",
       artist_id: userUid,
       audio_url: "https://example.com/test.mp3",
-      is_published: false,
-      explicit_content: false,
-      duration: 0,           // ✅ int4 (seconds)
-      bpm: 120,             // ✅ int4 
-      genre: ["Electronic"], // ✅ ARRAY FORMAT
-      key: "C Major",       // ✅ text
-      // Optional fields (can be null)
-      cover_art_url: null,
-      instruments: null,
-      vocal_type: null,
-      album_id: null,
-      label_id: null,
-      analysis_status: "pending"
+      is_published: false
     };
 
     console.log('🧪 Testing database insert with correct structure:', testTrack);
     const { data, error } = await supabase
       .from('tracks')
-      .insert(testTrack)
+      .insert([testTrack])
       .select();
       
     console.log('🧪 Test insert result:', { data, error });
@@ -479,67 +447,46 @@ export function UploadPage() {
               />
             </div>
 
-            <ScrollArea className="h-[calc(100%-5rem)]">
-              <div className="p-4 space-y-2">
+            <ScrollArea className="h-[calc(100vh-24rem)]">
+              <div className="divide-y">
                 {files.map(file => (
                   <div
                     key={file.id}
-                    className={cn(
-                      "flex items-center gap-4 p-3 rounded-lg border",
-                      "hover:bg-card/50"
-                    )}
+                    className="flex items-center gap-3 p-4 hover:bg-muted/50"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="font-medium truncate">{file.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatFileSize(file.size)}
-                          </div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium truncate">
+                          {file.name}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0"
-                          onClick={() => removeFile(file.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <Progress
-                            value={file.progress}
-                            className={cn(
-                              "h-1.5",
-                              file.status === 'error' && "bg-destructive/20",
-                              file.status === 'complete' && "bg-green-500/20"
-                            )}
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          {file.status === 'uploading' && (
-                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              <span>{Math.round(file.progress)}%</span>
-                            </div>
-                          )}
-                          {file.status === 'complete' && (
-                            <div className="flex items-center gap-1.5 text-sm text-green-500">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              <span>Complete</span>
-                            </div>
-                          )}
-                          {file.status === 'error' && (
-                            <div className="flex items-center gap-1.5 text-sm text-destructive">
-                              <AlertCircle className="h-3.5 w-3.5" />
-                              <span>{file.errorMessage}</span>
-                            </div>
-                          )}
+                        <div className="text-sm text-muted-foreground">
+                          ({(file.size / (1024 * 1024)).toFixed(2)} MB)
                         </div>
                       </div>
+                      {file.status === 'error' && (
+                        <div className="text-sm text-destructive mt-1">
+                          {file.errorMessage}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {file.status === 'uploading' && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {file.status === 'complete' && (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      )}
+                      {file.status === 'error' && (
+                        <AlertCircle className="h-4 w-4 text-destructive" />
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => removeFile(file.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}

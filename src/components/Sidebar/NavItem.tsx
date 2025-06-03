@@ -11,13 +11,29 @@ import { useLocation } from "@/hooks/useLocation";
 interface NavItemProps {
   icon: LucideIcon;
   label: React.ReactNode;
-  path: string;
+  path?: string;
+  onClick?: () => void;
   isCollapsed: boolean;
   isActive?: boolean;
 }
 
-export function NavItem({ icon: Icon, label, path, isCollapsed, isActive }: NavItemProps) {
+export function NavItem({ 
+  icon: Icon, 
+  label, 
+  path, 
+  onClick, 
+  isCollapsed, 
+  isActive 
+}: NavItemProps) {
   const { navigate } = useLocation();
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (path) {
+      navigate(path);
+    }
+  };
 
   const button = (
     <Button
@@ -31,7 +47,7 @@ export function NavItem({ icon: Icon, label, path, isCollapsed, isActive }: NavI
           "after:w-1 after:h-6 after:rounded-l-full after:bg-primary"
         ]
       )}
-      onClick={() => navigate(path)}
+      onClick={handleClick}
     >
       <Icon className={cn(
         "h-4 w-4 shrink-0",
