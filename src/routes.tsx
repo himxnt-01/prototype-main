@@ -19,6 +19,7 @@ import { InboxPage } from './pages/InboxPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { GamePage } from './pages/GamePage';
+import { DebugPage } from './pages/DebugPage';
 import RightsHoldersPage from './rights-holders/RightsHoldersPage';
 
 // Auth guard component
@@ -86,6 +87,9 @@ export function AppRoutes() {
         <Route path="/marketplace" element={<MarketplacePage />} />
         <Route path="/inbox" element={<InboxPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
+        
+        {/* Debug route */}
+        <Route path="/debug" element={<DebugPage />} />
       </Route>
 
       {/* Fallback route */}

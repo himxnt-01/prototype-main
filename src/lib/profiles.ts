@@ -179,7 +179,7 @@ export async function saveProfile(profile: Partial<ProfileData>, isDraft = false
       }
     }
 
-    // Prepare the profile data
+    // Prepare the profile data - excluding image fields
     const updateData = {
       display_name: profile.name || '',
       bio: profile.bio || '',
@@ -190,8 +190,6 @@ export async function saveProfile(profile: Partial<ProfileData>, isDraft = false
       experience: profile.experience || '',
       has_publishing_deal: profile.hasPublishingDeal || false,
       publishing_company: profile.publishingCompany || '',
-      profile_picture: profile.profile_picture || '',
-      header_image: profile.header_image || '',
       social_links: {
         instagram: profile.instagramUrl || '',
         spotify: profile.spotifyUrl || '',
@@ -209,10 +207,12 @@ export async function saveProfile(profile: Partial<ProfileData>, isDraft = false
     };
 
     // Update the profile
-    const { error: updateError } = await supabase
+    const { data: updatedProfile, error: updateError } = await supabase
       .from('profiles')
       .update(updateData)
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .select()
+      .single();
 
     if (updateError) {
       console.error('Error updating profile:', updateError);
@@ -222,7 +222,31 @@ export async function saveProfile(profile: Partial<ProfileData>, isDraft = false
     toast.success(isDraft ? 'Draft saved successfully' : 'Profile published successfully');
     
     // Return updated profile data
-    return await getProfile(user.id);
+    return {
+      ...profile,
+      name: updatedProfile.display_name || '',
+      artistType: existingUser.role === 'signed-artist' ? 'signed' : 'independent',
+      bio: updatedProfile.bio || '',
+      city: updatedProfile.city || '',
+      country: updatedProfile.country || '',
+      instrument: updatedProfile.instrument || '',
+      education: updatedProfile.education || '',
+      experience: updatedProfile.experience || '',
+      hasPublishingDeal: updatedProfile.has_publishing_deal || false,
+      publishingCompany: updatedProfile.publishing_company || '',
+      equipment: updatedProfile.equipment || [],
+      software: updatedProfile.software || [],
+      genres: updatedProfile.genres || [],
+      influences: updatedProfile.influences || [],
+      instagramUrl: updatedProfile.social_links?.instagram || '',
+      spotifyUrl: updatedProfile.social_links?.spotify || '',
+      appleMusicUrl: updatedProfile.social_links?.apple_music || '',
+      soundcloudUrl: updatedProfile.social_links?.soundcloud || '',
+      youtubeUrl: updatedProfile.social_links?.youtube || '',
+      websiteUrl: updatedProfile.social_links?.website || '',
+      profile_picture: updatedProfile.profile_picture || '',
+      header_image: updatedProfile.header_image || ''
+    };
   } catch (error) {
     console.error('Error saving profile:', error);
     toast.error('Failed to save profile');

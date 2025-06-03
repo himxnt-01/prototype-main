@@ -1,92 +1,59 @@
+import { Mix } from "./mix";
+
+export type LicenseTier = 'instant' | 'standard' | 'bespoke';
+
 export interface Draft {
-  id: number;
+  id: string;
   title: string;
   artist: string;
-  status: {
-    phase?: 
-      | "recording"
-      | "post_production" 
-      | "quality_control"
-      | "metadata_review"
-      | "legal_review"
-      | "distribution_ready"
-      | "published";
-    clearance?: {
-      industries?: string[];
-      restrictedCountries?: string[];
-    };
-    monetization?: boolean;
-    public?: boolean;
-    price?: number;
-    approvals?: Array<{
-      id: string;
-      name: string;
-      role: string;
-      type: string;
-      status: "approved" | "rejected" | "pending";
-    }>;
-    flags?: {
-      needsMetadata?: boolean;
-      needsLyrics?: boolean;
-      needsArtwork?: boolean;
-      needsLegalReview?: boolean;
-      hasConflicts?: boolean;
-      isHighPriority?: boolean;
-    };
-  };
   metadata: {
-    isrc?: string;
-    iswc?: string;
+    title?: string;
+    artist?: string;
     genre?: string;
     bpm?: number;
     key?: string;
     duration?: string;
-    language?: string;
-    explicit?: boolean;
-    publisher?: string;
-    masterRightsOwner?: string;
-    territories?: string[];
-    restrictions?: string[];
   };
-  rights: {
+  rights?: {
     writers: Array<{
       name: string;
-      role: string;
-      share: number;
+      role?: string;
+      share?: number;
     }>;
     publishers: Array<{
       name: string;
-      share: number;
-      territories?: string[];
+      share?: number;
     }>;
     masterOwners: Array<{
       name: string;
-      share: number;
-      territories?: string[];
+      share?: number;
     }>;
   };
   lyrics?: {
     content: string;
-    language: string;
-    explicit: boolean;
+    language?: string;
+    hasTranslations?: boolean;
   };
-  progress: number;
-  lastModified: string;
-  uploadDate: string;
-  dueDate?: string;
   tags?: string[];
-  verifiedTags?: string[];
-  mixes?: Array<{
-    id: number;
-    title: string;
-    type: string;
-    duration: string;
-    metadata: {
-      mixer: string;
-      date: string;
-      notes?: string;
-    };
-  }>;
+  status: {
+    phase: 'draft' | 'review' | 'published';
+    clearance: boolean;
+    monetization: boolean;
+    public: boolean;
+    flags: string[];
+  };
+  mixes?: Mix[];
+  licensing?: {
+    tier: LicenseTier;
+    isExclusive: boolean;
+    territories: string[];
+    usageTypes: string[];
+    restrictions: string;
+    customPrice: number | null;
+    requiresLicense: boolean;
+  };
+  lastModified: string;
+  created_at?: string;
 }
 
 export type Writer = {

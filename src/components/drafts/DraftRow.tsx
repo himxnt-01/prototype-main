@@ -3,7 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Music2 } from "lucide-react";
 import { Draft } from "@/types/draft";
 import { useDraftsStore } from "@/lib/drafts";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 interface DraftRowProps {
   draft: Draft;
@@ -31,6 +32,51 @@ export function DraftRow({ draft, index }: DraftRowProps) {
   
   const isSelected = selectedDraftId === draft.id;
   const isChecked = selectedDraftIds.has(draft.id);
+
+  // Calculate completion percentage including licensing
+  const calculateProgress = () => {
+    let total = 0;
+    let completed = 0;
+
+    // Metadata
+    if (draft.metadata) {
+      total += 6; // title, artist, genre, bpm, key, duration
+      completed += Object.values(draft.metadata).filter(Boolean).length;
+    }
+
+    // Rights
+    if (draft.rights) {
+      total += 3; // writers, publishers, masterOwners
+      completed += draft.rights.writers.length ? 1 : 0;
+      completed += draft.rights.publishers.length ? 1 : 0;
+      completed += draft.rights.masterOwners.length ? 1 : 0;
+    }
+
+    // Lyrics
+    if (draft.lyrics) {
+      total += 1;
+      completed += draft.lyrics.content ? 1 : 0;
+    }
+
+    // Tags
+    if (draft.tags) {
+      total += 1;
+      completed += draft.tags.length > 0 ? 1 : 0;
+    }
+
+    // Licensing
+    if (draft.licensing) {
+      total += 4; // tier, usageTypes, territories, restrictions
+      completed += draft.licensing.tier ? 1 : 0;
+      completed += draft.licensing.usageTypes.length > 0 ? 1 : 0;
+      completed += draft.licensing.territories.length > 0 ? 1 : 0;
+      completed += draft.licensing.restrictions ? 1 : 0;
+    }
+
+    return Math.round((completed / total) * 100);
+  };
+
+  const progress = calculateProgress();
 
   const handleClick = () => {
     if (isSelectionMode) {
@@ -86,10 +132,15 @@ export function DraftRow({ draft, index }: DraftRowProps) {
 
       <TableCell>
         <div className="space-y-1.5">
-          <Progress value={draft.progress} className="h-2" />
-          <div className="text-sm text-muted-foreground">
-            {draft.progress}%
+          <div className="flex items-center gap-2">
+            <Progress value={progress} className="w-32" />
+            <span className="text-sm text-muted-foreground">{progress}%</span>
           </div>
+          {draft.licensing?.tier && (
+            <Badge variant="outline" className="capitalize">
+              {draft.licensing.tier} License
+            </Badge>
+          )}
         </div>
       </TableCell>
 

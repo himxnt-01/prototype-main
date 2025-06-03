@@ -2,127 +2,147 @@ import { Draft } from "@/types/draft";
 
 export const drafts: Draft[] = [
   {
-    id: 1,
-    title: "Midnight Rain",
-    artist: "Sarah Chen",
-    status: {
-      phase: "post_production",
-      clearance: "pending_submission",
-      monetization: false,
-      public: false,
-      flags: {
-        needsMetadata: true,
-        isHighPriority: true
-      }
-    },
+    id: "1",
+    title: "Summer Breeze",
+    artist: "John Smith",
     metadata: {
-      genre: "Electronic",
-      bpm: 128,
+      title: "Summer Breeze",
+      artist: "John Smith",
+      genre: "Pop",
+      bpm: 120,
       key: "Am",
-      duration: "4:15",
-      language: "English",
-      explicit: false,
-      publisher: "Indie Publishing Co.",
-      masterRightsOwner: "Sarah Chen Music",
-      territories: ["Worldwide"]
+      duration: "3:45"
     },
     rights: {
       writers: [
-        { name: "Sarah Chen", role: "Composer/Lyricist", share: 100 }
+        { name: "John Smith", role: "Composer", share: 60 },
+        { name: "Jane Doe", role: "Lyricist", share: 40 }
       ],
       publishers: [
-        { name: "Indie Publishing Co.", share: 100 }
+        { name: "Music Publishing Co", share: 100 }
       ],
       masterOwners: [
-        { name: "Sarah Chen Music", share: 100 }
+        { name: "Record Label Inc", share: 100 }
       ]
     },
-    progress: 75,
-    lastModified: "2024-03-12T15:30:00Z",
-    uploadDate: "2024-03-10T09:00:00Z",
-    dueDate: "2024-03-20T00:00:00Z"
-  },
-  {
-    id: 2,
-    title: "Urban Echoes",
-    artist: "The Night Collective",
+    lyrics: {
+      content: "Verse 1...",
+      language: "English",
+      hasTranslations: false
+    },
+    tags: ["summer", "pop", "upbeat"],
     status: {
-      phase: "legal_review",
-      clearance: "under_review",
+      phase: "draft",
+      clearance: true,
       monetization: true,
       public: false,
-      flags: {
-        needsLegalReview: true,
-        hasConflicts: true
-      }
+      flags: []
     },
-    metadata: {
-      isrc: "USRC72400123",
-      genre: "Alternative",
-      bpm: 95,
-      key: "Em",
-      duration: "5:30",
-      language: "English",
-      explicit: false,
-      publisher: "Echo Publishing",
-      masterRightsOwner: "Night Collective LLC",
-      territories: ["North America", "Europe"]
+    licensing: {
+      tier: "premium",
+      isExclusive: false,
+      territories: ["Worldwide"],
+      usageTypes: ["Commercial", "Streaming", "Social Media"],
+      restrictions: "No adult content",
+      customPrice: null,
+      requiresLicense: true
     },
-    rights: {
-      writers: [
-        { name: "John Night", role: "Composer", share: 50 },
-        { name: "Maria Echo", role: "Lyricist", share: 50 }
-      ],
-      publishers: [
-        { name: "Echo Publishing", share: 100 }
-      ],
-      masterOwners: [
-        { name: "Night Collective LLC", share: 100 }
-      ]
-    },
-    progress: 90,
-    lastModified: "2024-03-11T18:45:00Z",
-    uploadDate: "2024-03-05T14:20:00Z",
-    dueDate: "2024-03-18T00:00:00Z"
+    lastModified: new Date().toISOString(),
+    created_at: new Date().toISOString()
   },
   {
-    id: 3,
-    title: "Desert Wind",
-    artist: "Maya Sands",
-    status: {
-      phase: "recording",
-      clearance: "not_started",
-      monetization: false,
-      public: false,
-      flags: {
-        isHighPriority: true
-      }
-    },
+    id: "2",
+    title: "Midnight Jazz",
+    artist: "Sarah Williams",
     metadata: {
-      genre: "World",
-      bpm: 85,
+      title: "Midnight Jazz",
+      artist: "Sarah Williams",
+      genre: "Jazz",
+      bpm: 90,
       key: "Dm",
-      duration: "6:00",
-      language: "Arabic",
-      explicit: false,
-      publisher: "World Beats Publishing",
-      masterRightsOwner: "Maya Sands Music",
-      territories: ["Worldwide"]
+      duration: "4:30"
     },
     rights: {
       writers: [
-        { name: "Maya Sands", role: "Composer/Lyricist", share: 100 }
+        { name: "Sarah Williams", role: "Composer", share: 100 }
       ],
-      publishers: [
-        { name: "World Beats Publishing", share: 100 }
-      ],
+      publishers: [],
       masterOwners: [
-        { name: "Maya Sands Music", share: 100 }
+        { name: "Independent", share: 100 }
       ]
     },
-    progress: 30,
-    lastModified: "2024-03-15T10:15:00Z",
-    uploadDate: "2024-03-15T09:00:00Z",
-    dueDate: "2024-04-01T00:00:00Z"
+    lyrics: {
+      content: "",
+      language: "English",
+      hasTranslations: false
+    },
+    tags: ["jazz", "instrumental", "night"],
+    status: {
+      phase: "draft",
+      clearance: false,
+      monetization: true,
+      public: false,
+      flags: ["needs_metadata"]
+    },
+    licensing: {
+      tier: "basic",
+      isExclusive: false,
+      territories: ["Worldwide"],
+      usageTypes: ["Streaming"],
+      restrictions: "",
+      customPrice: null,
+      requiresLicense: true
+    },
+    lastModified: new Date().toISOString(),
+    created_at: new Date().toISOString()
+  },
+  {
+    id: "3",
+    title: "Electric Dreams",
+    artist: "The Synthwave Collective",
+    metadata: {
+      title: "Electric Dreams",
+      artist: "The Synthwave Collective",
+      genre: "Electronic",
+      bpm: 128,
+      key: "F#m",
+      duration: "5:15"
+    },
+    rights: {
+      writers: [
+        { name: "Alex Chen", role: "Producer", share: 50 },
+        { name: "Mike Johnson", role: "Composer", share: 50 }
+      ],
+      publishers: [
+        { name: "Electronic Music Publishing", share: 100 }
+      ],
+      masterOwners: [
+        { name: "Synth Records", share: 100 }
+      ]
+    },
+    lyrics: {
+      content: "Verse 1...",
+      language: "English",
+      hasTranslations: false
+    },
+    tags: ["electronic", "synthwave", "retro"],
+    status: {
+      phase: "review",
+      clearance: true,
+      monetization: true,
+      public: false,
+      flags: []
+    },
+    licensing: {
+      tier: "exclusive",
+      isExclusive: true,
+      territories: ["Worldwide"],
+      usageTypes: ["Commercial", "Broadcast", "Film/TV", "Games"],
+      restrictions: "Exclusive worldwide rights",
+      customPrice: null,
+      requiresLicense: true
+    },
+    lastModified: new Date().toISOString(),
+    created_at: new Date().toISOString()
   }
 ];

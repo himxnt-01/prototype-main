@@ -7,11 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Draft } from "@/types/draft";
 import { cn } from "@/lib/utils";
-import { DollarSign, Film, Tv, Gamepad2, Radio, ShoppingBag, Check, X, Clock, Globe } from "lucide-react";
+import { DollarSign, Film, Tv, Gamepad2, Radio, ShoppingBag, Check, X, Clock, Globe, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DraftStatusFormProps {
-  draft: Draft;
+  draft?: Draft;
   onChange: (changes: Partial<Draft>) => void;
+  isLoading?: boolean;
 }
 
 // Industry options for clearance
@@ -24,62 +26,64 @@ const INDUSTRIES = [
   { id: "all", label: "All of the above", icon: Check },
 ];
 
-export function DraftStatusForm({ draft, onChange }: DraftStatusFormProps) {
-  const [price, setPrice] = useState(draft.status?.price?.toString() || "");
-  const [selectedIndustries, setSelectedIndustries] = useState<string[]>(
-    draft.status?.clearance?.industries || []
+type RightsHolderStatus = 'pending' | 'approved' | 'rejected';
+
+export function DraftStatusForm({ draft, onChange, isLoading = false }: DraftStatusFormProps) {
+  // Initialize state with empty values if draft is undefined
+  const [customPrice, setCustomPrice] = useState(
+    draft?.licensing?.customPrice?.toString() || ""
   );
-  const [restrictedCountries, setRestrictedCountries] = useState<string[]>(
-    draft.status?.clearance?.restrictedCountries || []
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>(
+    draft?.licensing?.usageTypes || []
+  );
+  const [restrictedTerritories, setRestrictedTerritories] = useState<string[]>(
+    draft?.licensing?.territories || []
   );
 
   // Get rights holders from the draft
-  const rightsHolders = [
+  const rightsHolders = draft ? [
     ...(draft.rights?.writers || []).map(writer => ({ 
       id: writer.name, 
       name: writer.name, 
-      role: writer.role,
+      role: writer.role || "Writer",
       type: "Writer",
-      status: "pending" as "approved" | "rejected" | "pending"
+      status: 'pending' as RightsHolderStatus
     })),
     ...(draft.rights?.publishers || []).map(publisher => ({ 
       id: publisher.name, 
       name: publisher.name, 
       role: "Publisher",
       type: "Publisher",
-      status: "pending" as "approved" | "rejected" | "pending"
+      status: 'pending' as RightsHolderStatus
     })),
     ...(draft.rights?.masterOwners || []).map(owner => ({ 
       id: owner.name, 
       name: owner.name, 
       role: "Master Rights Owner",
       type: "Master Owner",
-      status: "pending" as "approved" | "rejected" | "pending"
+      status: 'pending' as RightsHolderStatus
     }))
-  ];
+  ] : [];
 
   // Update draft status when form values change
   useEffect(() => {
-    const numPrice = price ? parseInt(price) : undefined;
+    if (!draft) return;
+
+    const numPrice = customPrice ? parseInt(customPrice) : null;
     
     onChange({
-      status: {
-        ...draft.status,
-        price: numPrice,
-        clearance: {
-          industries: selectedIndustries,
-          restrictedCountries: restrictedCountries
-        },
-        approvals: rightsHolders.map(holder => ({
-          id: holder.id,
-          name: holder.name,
-          role: holder.role,
-          type: holder.type,
-          status: holder.status
-        }))
+      licensing: {
+        ...draft.licensing,
+        customPrice: numPrice,
+        usageTypes: selectedIndustries,
+        territories: restrictedTerritories,
+        tier: 'custom',
+        isExclusive: false,
+        requiresLicense: true,
+        restrictions: ''
       }
     });
-  }, [price, selectedIndustries, restrictedCountries, onChange]);
+  }, [customPrice, selectedIndustries, restrictedTerritories, onChange, draft]);
 
   const handleIndustryToggle = (industryId: string) => {
     if (industryId === "all") {
@@ -95,15 +99,48 @@ export function DraftStatusForm({ draft, onChange }: DraftStatusFormProps) {
     }
   };
 
-  const handleCountryChange = (value: string) => {
-    if (!restrictedCountries.includes(value)) {
-      setRestrictedCountries([...restrictedCountries, value]);
+  const handleTerritoryChange = (value: string) => {
+    if (!restrictedTerritories.includes(value)) {
+      setRestrictedTerritories([...restrictedTerritories, value]);
     }
   };
 
-  const handleRemoveCountry = (country: string) => {
-    setRestrictedCountries(restrictedCountries.filter(c => c !== country));
+  const handleRemoveTerritory = (territory: string) => {
+    setRestrictedTerritories(restrictedTerritories.filter(t => t !== territory));
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 p-6">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-1/3" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-1/3" />
+          <Skeleton className="h-4 w-2/3" />
+          <div className="grid grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!draft) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+        <div className="text-muted-foreground space-y-2">
+          <X className="h-12 w-12 mx-auto mb-4" />
+          <h3 className="text-lg font-medium">No Draft Selected</h3>
+          <p className="text-sm">Please select a draft to view and edit its status.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ScrollArea className="h-full">
@@ -122,8 +159,8 @@ export function DraftStatusForm({ draft, onChange }: DraftStatusFormProps) {
             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              value={customPrice}
+              onChange={(e) => setCustomPrice(e.target.value)}
               placeholder="Enter price"
               className="pl-8"
               min="0"
@@ -131,11 +168,11 @@ export function DraftStatusForm({ draft, onChange }: DraftStatusFormProps) {
           </div>
         </div>
 
-        {/* Clearance Section */}
+        {/* Usage Types Section */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Film className="h-5 w-5 text-blue-500" />
-            <h3 className="text-lg font-medium">Clearance</h3>
+            <h3 className="text-lg font-medium">Usage Types</h3>
           </div>
           <p className="text-sm text-muted-foreground">
             Select which industries you want your music to be used in
@@ -175,20 +212,20 @@ export function DraftStatusForm({ draft, onChange }: DraftStatusFormProps) {
           </div>
         </div>
 
-        {/* Country Restrictions */}
+        {/* Territory Restrictions */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-purple-500" />
-            <h3 className="text-lg font-medium">Country Restrictions</h3>
+            <h3 className="text-lg font-medium">Territory Restrictions</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Select countries where you don't want your music to be licensed
+            Select territories where you don't want your music to be licensed
           </p>
           
           <div className="space-y-4">
-            <Select onValueChange={handleCountryChange}>
+            <Select onValueChange={handleTerritoryChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Select countries to restrict" />
+                <SelectValue placeholder="Select territories to restrict" />
               </SelectTrigger>
               <SelectContent>
                 {COUNTRIES.map(country => (
@@ -197,21 +234,17 @@ export function DraftStatusForm({ draft, onChange }: DraftStatusFormProps) {
               </SelectContent>
             </Select>
             
-            {restrictedCountries.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {restrictedCountries.map(country => (
+            {restrictedTerritories.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {restrictedTerritories.map(territory => (
                   <Badge 
-                    key={country} 
+                    key={territory} 
                     variant="secondary"
-                    className="bg-purple-500/10 text-purple-500 pl-2 pr-1 py-1 flex items-center gap-1"
+                    className="cursor-pointer hover:bg-destructive/10"
+                    onClick={() => handleRemoveTerritory(territory)}
                   >
-                    {country}
-                    <button 
-                      className="ml-1 rounded-full hover:bg-purple-500/20 p-0.5"
-                      onClick={() => handleRemoveCountry(country)}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    {territory}
+                    <X className="h-3 w-3 ml-1" />
                   </Badge>
                 ))}
               </div>
@@ -219,55 +252,38 @@ export function DraftStatusForm({ draft, onChange }: DraftStatusFormProps) {
           </div>
         </div>
 
-        {/* Approval Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Check className="h-5 w-5 text-green-500" />
-            <h3 className="text-lg font-medium">Approval</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Requires approval of all rights holders to list on our Platform
-          </p>
-          
-          <div className="space-y-3 rounded-lg border p-4">
-            {rightsHolders.length > 0 ? (
-              rightsHolders.map((holder) => (
-                <div key={holder.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-normal">
-                      {holder.type}
-                    </Badge>
-                    <span>{holder.name}</span>
+        {/* Rights Holders Approval Status */}
+        {rightsHolders.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-orange-500" />
+              <h3 className="text-lg font-medium">Rights Holder Approvals</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Track the approval status of all rights holders
+            </p>
+            
+            <div className="space-y-3">
+              {rightsHolders.map((holder) => (
+                <div 
+                  key={holder.id}
+                  className="flex items-center justify-between p-3 rounded-lg border"
+                >
+                  <div>
+                    <div className="font-medium">{holder.name}</div>
+                    <div className="text-sm text-muted-foreground">{holder.role}</div>
                   </div>
-                  <Badge 
-                    variant="secondary"
-                    className={cn(
-                      holder.status === "approved" && "bg-green-500/10 text-green-500",
-                      holder.status === "rejected" && "bg-red-500/10 text-red-500",
-                      holder.status === "pending" && "bg-yellow-500/10 text-yellow-500"
-                    )}
-                  >
-                    {holder.status === "approved" && (
-                      <Check className="h-3 w-3 mr-1" />
-                    )}
-                    {holder.status === "rejected" && (
-                      <X className="h-3 w-3 mr-1" />
-                    )}
-                    {holder.status === "pending" && (
-                      <Clock className="h-3 w-3 mr-1" />
-                    )}
-                    {holder.status === "approved" ? "Approved" : 
-                     holder.status === "rejected" ? "Rejected" : "Pending"}
+                  <Badge variant={holder.status === 'pending' ? 'outline' : 'secondary'}>
+                    {holder.status === 'approved' && <Check className="h-3 w-3 mr-1" />}
+                    {holder.status === 'rejected' && <X className="h-3 w-3 mr-1" />}
+                    {holder.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                    {holder.status.charAt(0).toUpperCase() + holder.status.slice(1)}
                   </Badge>
                 </div>
-              ))
-            ) : (
-              <div className="text-sm text-muted-foreground text-center py-2">
-                No rights holders defined. Please add them in the Rights section.
-              </div>
-            )}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </ScrollArea>
   );

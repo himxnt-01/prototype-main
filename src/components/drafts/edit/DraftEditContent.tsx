@@ -1,97 +1,74 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TabsContent } from "@/components/ui/tabs";
 import { Draft } from "@/types/draft";
 import { ViewId } from "./DraftEditView";
-import { MetadataForm } from "./forms/metadata/MetadataForm";
+// import { DraftMetadataForm } from "./forms/metadata/DraftMetadataForm";
 import { DraftRightsForm } from "./forms/DraftRightsForm";
 import { DraftLyricsForm } from "./forms/DraftLyricsForm";
 import { DraftTagsForm } from "./forms/DraftTagsForm";
 import { DraftStatusForm } from "./forms/DraftStatusForm";
+import { TrackLicensingForm } from "./forms/licensing/TrackLicensingForm";
 import { useDraftsStore } from "@/lib/drafts";
 
 interface DraftEditContentProps {
   draft: Draft;
-  currentView: ViewId;
 }
 
-export function DraftEditContent({ draft, currentView }: DraftEditContentProps) {
+export function DraftEditContent({ draft }: DraftEditContentProps) {
   const { updateDraft } = useDraftsStore();
 
-  const handleUpdate = (field: string, value: any) => {
-    const updatedDraft = { ...draft };
-    const fields = field.split('.');
-    let current: any = updatedDraft;
-    
-    for (let i = 0; i < fields.length - 1; i++) {
-      if (!current[fields[i]]) {
-        current[fields[i]] = {};
-      }
-      current = current[fields[i]];
-    }
-    
-    current[fields[fields.length - 1]] = value;
-    updateDraft(draft.id, updatedDraft);
-  };
-
-  const renderContent = () => {
-    switch (currentView) {
-      case "metadata":
-        return (
-          <MetadataForm
-            draft={draft}
-            onUpdate={handleUpdate}
-          />
-        );
-
-      case "rights":
-        return (
-          <DraftRightsForm
-            rights={draft.rights}
-            onChange={(rights) => handleUpdate("rights", rights)}
-          />
-        );
-
-      case "lyrics":
-        return (
-          <DraftLyricsForm
-            lyrics={draft.lyrics}
-            onChange={(lyrics) => handleUpdate("lyrics", lyrics)}
-          />
-        );
-
-      case "tags":
-        return (
-          <DraftTagsForm
-            selectedTags={draft.tags || []}
-            verifiedTags={draft.verifiedTags || []}
-            onChange={(tags) => handleUpdate("tags", tags)}
-            onVerify={(tag) => {
-              const verifiedTags = draft.verifiedTags || [];
-              const newVerifiedTags = verifiedTags.includes(tag)
-                ? verifiedTags.filter(t => t !== tag)
-                : [...verifiedTags, tag];
-              handleUpdate("verifiedTags", newVerifiedTags);
-            }}
-          />
-        );
-
-      case "status":
-        return (
-          <DraftStatusForm
-            status={draft.status}
-            onChange={(status) => handleUpdate("status", status)}
-          />
-        );
-
-      default:
-        return null;
-    }
+  const handleUpdate = (updates: Partial<Draft>) => {
+    updateDraft(draft.id, { ...draft, ...updates });
   };
 
   return (
-    <div className="flex-1 overflow-hidden">
-      <ScrollArea className="h-full">
-        {renderContent()}
-      </ScrollArea>
-    </div>
+    <ScrollArea className="flex-1">
+      <TabsContent value="metadata">
+        {/* Temporarily commented out due to missing component
+        <DraftMetadataForm 
+          metadata={draft.metadata} 
+          onChange={(metadata) => handleUpdate({ metadata })} 
+        />
+        */}
+        <div className="p-6">
+          <p className="text-muted-foreground">Metadata form temporarily unavailable</p>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="rights">
+        <DraftRightsForm 
+          draft={draft} 
+          onChange={handleUpdate} 
+        />
+      </TabsContent>
+
+      <TabsContent value="lyrics">
+        <DraftLyricsForm 
+          lyrics={draft.lyrics} 
+          onChange={(lyrics) => handleUpdate({ lyrics })} 
+        />
+      </TabsContent>
+
+      <TabsContent value="tags">
+        <DraftTagsForm 
+          tags={draft.tags} 
+          onChange={(tags) => handleUpdate({ tags })} 
+        />
+      </TabsContent>
+
+      <TabsContent value="status">
+        <DraftStatusForm 
+          status={draft.status} 
+          onChange={(status) => handleUpdate({ status })} 
+        />
+      </TabsContent>
+
+      <TabsContent value="licensing">
+        <TrackLicensingForm 
+          draft={draft}
+          onChange={handleUpdate}
+        />
+      </TabsContent>
+    </ScrollArea>
   );
 }
