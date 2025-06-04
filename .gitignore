@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables - Add these
+.env*
+!.env.example
+!.env.sample
+
+# Supabase specific - Add these
+supabase/.temp/
+supabase/functions/**/.env
+supabase/functions/**/.env.local
+
+# Secrets files - Add this
+temp_secret.txt

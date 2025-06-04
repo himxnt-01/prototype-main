@@ -164,7 +164,7 @@ export function UploadPage() {
       const trackData = {
         id: trackId,
         title: file.name,
-        artist_id: userUid,
+        user_id: userUid,
         audio_url: audioUrl,
         is_published: false,
         explicit_content: false,
