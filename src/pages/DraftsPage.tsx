@@ -3,9 +3,36 @@ import { DraftsList } from "@/components/drafts/DraftsList";
 import { DraftEditView } from "@/components/drafts/edit/DraftEditView";
 import { useDraftsStore } from "@/lib/drafts";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 export function DraftsPage() {
-  const { isDetailsOpen } = useDraftsStore();
+  const { isDetailsOpen, fetchDrafts, isLoading, error, subscribeToChanges } = useDraftsStore();
+
+  useEffect(() => {
+    fetchDrafts();
+    const unsubscribe = subscribeToChanges();
+
+    return () => {
+      unsubscribe();
+    };
+  }, [fetchDrafts, subscribeToChanges]);
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-destructive">Error loading drafts: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-4rem)] flex gap-6">

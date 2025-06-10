@@ -5,17 +5,13 @@ import { Globe2, AlertTriangle } from "lucide-react";
 import { Draft } from "@/types/draft";
 
 interface ContentInfoProps {
-  metadata: Draft["metadata"];
-  onChange: (metadata: Draft["metadata"]) => void;
+  draft: Draft;
+  onChange: (changes: Partial<Draft>) => void;
 }
 
-export function ContentInfo({ metadata, onChange }: ContentInfoProps) {
-  // Initialize empty metadata if not present
-  const data = metadata || {};
-
-  const handleChange = (key: keyof Draft["metadata"], value: any) => {
-    const updatedMetadata = { ...data, [key]: value };
-    onChange(updatedMetadata);
+export function ContentInfo({ draft, onChange }: ContentInfoProps) {
+  const handleChange = (key: keyof Draft, value: any) => {
+    onChange({ [key]: value });
   };
 
   return (
@@ -23,15 +19,15 @@ export function ContentInfo({ metadata, onChange }: ContentInfoProps) {
       <FormField label="Language" icon={Globe2}>
         <Input
           placeholder="e.g., English"
-          value={data.language || ""}
+          value={draft.language || ""}
           onChange={(e) => handleChange("language", e.target.value)}
         />
       </FormField>
 
       <FormField label="Explicit" icon={AlertTriangle}>
         <Select
-          value={data.explicit ? "yes" : "no"}
-          onValueChange={(value) => handleChange("explicit", value === "yes")}
+          value={draft.explicit_content ? "yes" : "no"}
+          onValueChange={(value) => handleChange("explicit_content", value === "yes")}
         >
           <SelectTrigger>
             <SelectValue />

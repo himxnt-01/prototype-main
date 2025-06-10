@@ -1,92 +1,42 @@
+// src/types/draft.ts
+
+// This is the single source of truth for a track object.
+// It is based on the 'tracks' table in Supabase.
+
 export interface Draft {
-  id: number;
+  id: string; // UUID from Supabase
+  created_at: string;
+  updated_at?: string;
   title: string;
-  artist: string;
-  status: {
-    phase?: 
-      | "recording"
-      | "post_production" 
-      | "quality_control"
-      | "metadata_review"
-      | "legal_review"
-      | "distribution_ready"
-      | "published";
-    clearance?: {
-      industries?: string[];
-      restrictedCountries?: string[];
-    };
-    monetization?: boolean;
-    public?: boolean;
-    price?: number;
-    approvals?: Array<{
-      id: string;
-      name: string;
-      role: string;
-      type: string;
-      status: "approved" | "rejected" | "pending";
-    }>;
-    flags?: {
-      needsMetadata?: boolean;
-      needsLyrics?: boolean;
-      needsArtwork?: boolean;
-      needsLegalReview?: boolean;
-      hasConflicts?: boolean;
-      isHighPriority?: boolean;
-    };
-  };
-  metadata: {
-    isrc?: string;
-    iswc?: string;
-    genre?: string;
-    bpm?: number;
-    key?: string;
-    duration?: string;
-    language?: string;
-    explicit?: boolean;
-    publisher?: string;
-    masterRightsOwner?: string;
-    territories?: string[];
-    restrictions?: string[];
-  };
-  rights: {
-    writers: Array<{
-      name: string;
-      role: string;
-      share: number;
-    }>;
-    publishers: Array<{
-      name: string;
-      share: number;
-      territories?: string[];
-    }>;
-    masterOwners: Array<{
-      name: string;
-      share: number;
-      territories?: string[];
-    }>;
-  };
-  lyrics?: {
-    content: string;
-    language: string;
-    explicit: boolean;
-  };
-  progress: number;
-  lastModified: string;
-  uploadDate: string;
-  dueDate?: string;
-  tags?: string[];
-  verifiedTags?: string[];
-  mixes?: Array<{
-    id: number;
-    title: string;
-    type: string;
-    duration: string;
-    metadata: {
-      mixer: string;
-      date: string;
-      notes?: string;
-    };
-  }>;
+  user_id: string; // UUID of the user
+  audio_url: string;
+  cover_art_url?: string;
+  is_published: boolean;
+  analysis_status?: 'pending' | 'processing' | 'complete' | 'error';
+  error_message?: string;
+
+  // Gemini Analysis Fields
+  bpm?: number;
+  key?: string;
+  genre?: string[];
+  subgenre?: string;
+  moods?: string[];
+  instruments?: string[];
+  vocal_type?: 'male' | 'female' | 'instrumental';
+  explicit_content?: boolean;
+  description?: string;
+  emotional_arc?: string;
+  language?: string;
+  harmony?: string;
+  chord_progression?: string;
+  lyrical_theme?: string;
+  cultural_fusion?: string;
+  historical_period?: string;
+
+  // Legacy/UI fields (can be mapped or have defaults)
+  artist?: string; // Can be derived from user profile
+  progress: number; // Represents metadata completion, can be calculated
+  lastModified: string; // Should be updated_at
 }
 
 export type Writer = {

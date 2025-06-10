@@ -1,124 +1,51 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Draft } from "@/types/draft";
-import { useDraftsStore } from "@/lib/drafts";
-import { DraftDetailsHeader } from "./DraftDetailsHeader";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
-export function DraftDetails() {
-  const { drafts, selectedDraftId, updateDraft, closeDetails } = useDraftsStore();
-  const draft = drafts.find(d => d.id === selectedDraftId);
+interface InfoCardProps {
+  title: string;
+  value?: React.ReactNode;
+}
 
-  if (!draft) return null;
+const InfoCard = ({ title, value }: InfoCardProps) => (
+  <div className="bg-background/50 p-3 rounded-lg min-h-[74px]">
+    <p className="text-xs text-muted-foreground mb-1">{title}</p>
+    <div className="text-sm font-medium flex flex-wrap gap-1">{value || "-"}</div>
+  </div>
+);
 
-  const handleSave = (field: keyof Draft, value: any) => {
-    updateDraft(draft.id, { ...draft, [field]: value });
-  };
+interface DraftDetailsProps {
+  draft: Draft;
+}
 
+export function DraftDetails({ draft }: DraftDetailsProps) {
   return (
-    <div className="h-full flex flex-col">
-      <DraftDetailsHeader draft={draft} onClose={closeDetails} />
-      
-      <ScrollArea className="flex-1">
-        <div className="p-6 space-y-8">
-          <div className="space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-lg font-medium">Title & Artist</h3>
-              <p className="text-sm text-muted-foreground">Basic track information</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={draft.title}
-                  onChange={(e) => handleSave("title", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="artist">Artist</Label>
-                <Input
-                  id="artist"
-                  value={draft.artist}
-                  onChange={(e) => handleSave("artist", e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-lg font-medium">Metadata</h3>
-              <p className="text-sm text-muted-foreground">Track details and specifications</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="genre">Genre</Label>
-                <Input
-                  id="genre"
-                  value={draft.metadata.genre}
-                  onChange={(e) => handleSave("metadata", { ...draft.metadata, genre: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bpm">BPM</Label>
-                <Input
-                  id="bpm"
-                  type="number"
-                  value={draft.metadata.bpm}
-                  onChange={(e) => handleSave("metadata", { ...draft.metadata, bpm: parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="key">Key</Label>
-                <Input
-                  id="key"
-                  value={draft.metadata.key}
-                  onChange={(e) => handleSave("metadata", { ...draft.metadata, key: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duration</Label>
-                <Input
-                  id="duration"
-                  value={draft.metadata.duration}
-                  onChange={(e) => handleSave("metadata", { ...draft.metadata, duration: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-lg font-medium">Rights & Licensing</h3>
-              <p className="text-sm text-muted-foreground">Publishing and ownership information</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="publisher">Publisher</Label>
-                <Input
-                  id="publisher"
-                  value={draft.metadata.publisher}
-                  onChange={(e) => handleSave("metadata", { ...draft.metadata, publisher: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="masterRightsOwner">Master Rights Owner</Label>
-                <Input
-                  id="masterRightsOwner"
-                  value={draft.metadata.masterRightsOwner}
-                  onChange={(e) => handleSave("metadata", { ...draft.metadata, masterRightsOwner: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
+    <div className="p-4 bg-transparent">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <InfoCard title="Moods" value={draft.moods?.map((m) => <Badge key={m} variant="outline" className="font-normal">{m}</Badge>)} />
+        <InfoCard title="Instruments" value={draft.instruments?.join(', ')} />
+        <InfoCard title="Vocal Type" value={draft.vocal_type} />
+        <InfoCard title="Explicit" value={draft.explicit_content ? "Yes" : "No"} />
+        <InfoCard title="Lyrical Theme" value={draft.lyrical_theme} />
+        <InfoCard title="Cultural Fusion" value={draft.cultural_fusion} />
+        <InfoCard title="Harmony" value={draft.harmony} />
+        <InfoCard title="Historical Period" value={draft.historical_period} />
+      </div>
+      <Separator className="my-4" />
+      <div className="space-y-4">
+        <div>
+          <h4 className="font-medium mb-1 text-sm">Chord Progression</h4>
+          <p className="text-sm text-muted-foreground">
+            {draft.chord_progression || "No chord progression data available."}
+          </p>
         </div>
-      </ScrollArea>
+        <div>
+          <h4 className="font-medium mb-1 text-sm">Description</h4>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {draft.description || "No description available."}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

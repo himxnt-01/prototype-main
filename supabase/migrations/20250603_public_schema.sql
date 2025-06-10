@@ -108,26 +108,11 @@ CREATE FUNCTION public.handle_new_track_upload() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 BEGIN
-  -- Only process files in the 'tracks' bucket
-  IF NEW.bucket_id = 'tracks' THEN
-    -- Log that we're processing
-    RAISE LOG 'Processing storage upload: %', NEW.name;
-    
-    -- Call the Edge Function
-    PERFORM
-      net.http_post(
-        url := 'https://lgtkfiwqyolgelganvxd.supabase.co/functions/v1/process-track-upload',
-        headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndGtmaXdxeW9sZ2dsZ2FudnhkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODYwMTIyNiwiZXhwIjoyMDY0MTc3MjI2fQ.K_d07Oijiyh1C4e6bujFMhCbdtxr6Vel5FVIajSHXXI"}',
-        body := json_build_object(
-          'object_id', NEW.id,
-          'bucket_id', NEW.bucket_id,
-          'object_name', NEW.name,
-          'object_path', NEW.name
-        )::text
-      );
-      
-    RAISE LOG 'Called Edge Function for: %', NEW.name;
-  END IF;
+  -- This function is deprecated and its logic has been consolidated
+  -- into the trigger on the 'tracks' table (trigger_cyanite_analysis).
+  -- Leaving the function definition to prevent errors if the trigger isn't dropped,
+  -- but making it a no-op.
+  RAISE LOG 'handle_new_track_upload() is deprecated and was called for object: %', NEW.name;
   RETURN NEW;
 END;
 $$;
@@ -160,18 +145,10 @@ CREATE FUNCTION public.trigger_cyanite_analysis() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  PERFORM net.http_post(
-    url := 'https://lgtkfiwqyolgglganvxd.supabase.co/functions/v1/process-track-upload',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndGtmaXdxeW9sZ2dsZ2FudnhkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNzQ2ODUyNCwiZXhwIjoyMDUzMDQ0NTI0fQ.K_d070jjyhIC4eGbujFHhCbdtxr6Vel5FVIajSHXXI',
-      'Content-Type', 'application/json'
-    ),
-    body := jsonb_build_object(
-      'trackId', NEW.id,
-      'audioUrl', NEW.audio_url,
-      'fileName', NEW.title
-    )
-  );
+  -- This function is deprecated. The analysis is now triggered
+  -- from the client-side after a successful upload. This function
+  -- is left in place to prevent errors but does nothing.
+  RAISE LOG 'DEPRECATED: trigger_cyanite_analysis() was called but is disabled.';
   RETURN NEW;
 END;
 $$;
@@ -190,7 +167,7 @@ BEGIN
   -- If status changed from error to pending, retry
   IF OLD.analysis_status = 'error' AND NEW.analysis_status = 'pending' THEN
     SELECT net.http_post(
-      url := 'https://lgtkflwqvolgelganvxd.supabase.co/functions/v1/process-track-upload',
+      url := 'https://lgtkflwqvolgelganvxd.supabase.co/functions/v1/analyze-audio-gemini',
       headers := jsonb_build_object(
         'Authorization', 'Bearer ' || current_setting('app.settings.supabase_service_role_key'),
         'Content-Type', 'application/json'

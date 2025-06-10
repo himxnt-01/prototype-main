@@ -1,43 +1,29 @@
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Draft } from "@/types/draft";
 import { useDraftsStore } from "@/lib/drafts";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
+import { DraftDetails } from "./DraftDetails";
 
 interface DraftRowProps {
   draft: Draft;
-  index: number;
 }
 
-export function DraftRow({ draft, index }: DraftRowProps) {
+export function DraftRow({ draft }: DraftRowProps) {
   const { 
     selectDraft, 
     selectedDraftId,
-    isSelectionMode,
-    selectedDraftIds,
-    toggleDraftSelection
   } = useDraftsStore();
   
   const isSelected = selectedDraftId === draft.id;
-  const isChecked = selectedDraftIds.has(draft.id);
 
-  const handleClick = () => {
-    if (isSelectionMode) {
-      toggleDraftSelection(draft.id);
-    } else {
-      selectDraft(draft.id);
-    }
+  const handleRowClick = () => {
+    // This will open the main details panel on the right
+    selectDraft(draft.id);
   };
 
   return (
@@ -45,32 +31,14 @@ export function DraftRow({ draft, index }: DraftRowProps) {
       className={cn(
         "group cursor-pointer transition-all relative",
         "hover:bg-card/50",
-        (isSelected || isChecked) && [
-          "bg-card/50",
-          "shadow-[0_0_0_1px_rgba(255,255,255,0.1)]",
-          "relative z-10"
-        ]
+        isSelected && "bg-card/50",
       )}
-      onClick={handleClick}
+      onClick={handleRowClick}
     >
-      <TableCell className="w-[48px] text-center">
-        {isSelectionMode ? (
-          <div className="flex items-center justify-center">
-            <Checkbox 
-              checked={isChecked}
-              onCheckedChange={() => toggleDraftSelection(draft.id)}
-              className="bg-background data-[state=checked]:bg-primary"
-            />
-          </div>
-        ) : (
-          <span>{index + 1}</span>
-        )}
-      </TableCell>
-
       <TableCell className="w-[48px] p-2">
         <Avatar className="rounded-md w-10 h-10">
           <img 
-            src={`https://picsum.photos/seed/${draft.id}/40/40`} 
+            src={draft.cover_art_url || `https://picsum.photos/seed/${draft.id}/40/40`} 
             alt={draft.title}
             className="object-cover"
           />
@@ -80,16 +48,23 @@ export function DraftRow({ draft, index }: DraftRowProps) {
       <TableCell>
         <div className="space-y-0.5">
           <div className="font-medium">{draft.title}</div>
-          <div className="text-sm text-muted-foreground">{draft.artist}</div>
+          <div className="text-sm text-muted-foreground">{draft.artist || 'Unknown Artist'}</div>
         </div>
       </TableCell>
 
-      <TableCell>
-        <div className="space-y-1.5">
-          <Progress value={draft.progress} className="h-2" />
-          <div className="text-sm text-muted-foreground">
-            {draft.progress}%
-          </div>
+      <TableCell className="text-muted-foreground text-sm">
+        {draft.genre?.join(', ')}
+      </TableCell>
+
+      <TableCell className="text-muted-foreground text-sm">
+        <div className="inline-flex items-center rounded-md bg-purple-400/10 px-2.5 py-0.5 text-xs font-semibold text-purple-400">
+          {draft.key}
+        </div>
+      </TableCell>
+      
+      <TableCell className="text-muted-foreground text-sm">
+        <div className="inline-flex items-center rounded-md bg-blue-400/10 px-2.5 py-0.5 text-xs font-semibold text-blue-400">
+          {draft.bpm}
         </div>
       </TableCell>
 
@@ -97,21 +72,6 @@ export function DraftRow({ draft, index }: DraftRowProps) {
         <div className="text-sm text-muted-foreground">
           {formatDistanceToNow(new Date(draft.lastModified), { addSuffix: true })}
         </div>
-      </TableCell>
-
-      <TableCell className="w-[48px]" onClick={(e) => e.stopPropagation()}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Edit</DropdownMenuItem>
-            <DropdownMenuItem>Share</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </TableCell>
     </TableRow>
   );

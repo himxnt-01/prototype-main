@@ -4,17 +4,13 @@ import { Barcode, Calendar } from "lucide-react";
 import { Draft } from "@/types/draft";
 
 interface CommercialInfoProps {
-  metadata: Draft["metadata"];
-  onChange: (metadata: Draft["metadata"]) => void;
+  draft: Draft;
+  onChange: (changes: Partial<Draft>) => void;
 }
 
-export function CommercialInfo({ metadata, onChange }: CommercialInfoProps) {
-  // Initialize empty metadata if not present
-  const data = metadata || {};
-
-  const handleChange = (key: keyof Draft["metadata"], value: any) => {
-    const updatedMetadata = { ...data, [key]: value };
-    onChange(updatedMetadata);
+export function CommercialInfo({ draft, onChange }: CommercialInfoProps) {
+  const handleChange = (key: keyof Draft, value: any) => {
+    onChange({ [key]: value });
   };
 
   return (
@@ -22,16 +18,16 @@ export function CommercialInfo({ metadata, onChange }: CommercialInfoProps) {
       <FormField label="ISRC Code" icon={Barcode}>
         <Input
           placeholder="e.g., USRC17607839"
-          value={data.isrc || ""}
-          onChange={(e) => handleChange("isrc", e.target.value)}
+          value={""}
+          readOnly
         />
       </FormField>
 
       <FormField label="Release Date" icon={Calendar}>
         <Input
           type="date"
-          value={data.releaseDate || ""}
-          onChange={(e) => handleChange("releaseDate", e.target.value)}
+          value={""}
+          readOnly
         />
       </FormField>
     </div>

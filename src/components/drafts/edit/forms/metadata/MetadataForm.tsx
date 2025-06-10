@@ -117,23 +117,23 @@ export function MetadataForm({ draft, onChange }: MetadataFormProps) {
       <div className={isScanning ? "opacity-50 pointer-events-none" : ""}>
         <div className="space-y-10">
           <BasicInfo 
-            metadata={draft.metadata} 
-            onChange={(metadata) => onChange({ metadata })}
+            draft={draft} 
+            onChange={onChange}
           />
           
           <CommercialInfo 
-            metadata={draft.metadata} 
-            onChange={(metadata) => onChange({ metadata })}
+            draft={draft}
+            onChange={onChange}
           />
           
           <TrackDetails 
-            metadata={draft.metadata} 
-            onChange={(metadata) => onChange({ metadata })}
+            draft={draft}
+            onChange={onChange}
           />
           
           <ContentInfo 
-            metadata={draft.metadata} 
-            onChange={(metadata) => onChange({ metadata })}
+            draft={draft}
+            onChange={onChange}
           />
         </div>
       </div>

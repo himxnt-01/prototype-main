@@ -4,17 +4,13 @@ import { Music, User } from "lucide-react";
 import { Draft } from "@/types/draft";
 
 interface BasicInfoProps {
-  metadata: Draft["metadata"];
-  onChange: (metadata: Draft["metadata"]) => void;
+  draft: Draft;
+  onChange: (changes: Partial<Draft>) => void;
 }
 
-export function BasicInfo({ metadata, onChange }: BasicInfoProps) {
-  // Initialize empty metadata if not present
-  const data = metadata || {};
-
-  const handleChange = (key: keyof Draft["metadata"], value: any) => {
-    const updatedMetadata = { ...data, [key]: value };
-    onChange(updatedMetadata);
+export function BasicInfo({ draft, onChange }: BasicInfoProps) {
+  const handleChange = (key: keyof Draft, value: any) => {
+    onChange({ [key]: value });
   };
 
   return (
@@ -23,7 +19,7 @@ export function BasicInfo({ metadata, onChange }: BasicInfoProps) {
         <FormField label="Title" icon={Music}>
           <Input
             placeholder="Track title"
-            value={data.title || ""}
+            value={draft.title || ""}
             onChange={(e) => handleChange("title", e.target.value)}
           />
         </FormField>
@@ -31,7 +27,7 @@ export function BasicInfo({ metadata, onChange }: BasicInfoProps) {
         <FormField label="Artist" icon={User}>
           <Input
             placeholder="Artist name"
-            value={data.artist || ""}
+            value={draft.artist || ""}
             onChange={(e) => handleChange("artist", e.target.value)}
           />
         </FormField>

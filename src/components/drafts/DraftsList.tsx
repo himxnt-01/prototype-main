@@ -12,17 +12,18 @@ export function DraftsList() {
           <TableRow className="hover:bg-transparent border-b border-border/50">
             <TableHead className="w-12"></TableHead>
             <TableHead>Title</TableHead>
-            <TableHead>Progress</TableHead>
+            <TableHead>Genre</TableHead>
+            <TableHead>Key</TableHead>
+            <TableHead>BPM</TableHead>
             <TableHead>Last Modified</TableHead>
             <TableHead className="w-12"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {drafts.map((draft, index) => (
+          {drafts.map((draft) => (
             <DraftRow 
               key={draft.id} 
               draft={draft} 
-              index={index}
             />
           ))}
         </TableBody>

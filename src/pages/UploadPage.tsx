@@ -158,7 +158,9 @@ export function UploadPage() {
 
       console.log('🎉 Upload complete! (Database insert disabled temporarily)');
 
-       
+      // The temporary block that was skipping the database insert has been removed.
+      // We will now proceed with inserting the track data into the database,
+      // which will trigger the analysis function.
       
       console.log('💾 Starting database insert...');
       const trackData = {
@@ -198,11 +200,14 @@ export function UploadPage() {
         const newDraft = mapSupabaseTrackToLocalTrack(trackInsertData[0]);
         setDrafts([newDraft, ...drafts]);
         console.log('🎉 COMPLETE SUCCESS with Cloudinary!');
+      } else {
+        console.error('Database insert did not return the expected data.');
+        throw new Error('Database insert succeeded but no data was returned.');
       }
       
 
-    } catch (error) {
-      console.error('💥 Upload error:', error);
+    } catch (error: any) {
+      console.error('❌ Upload failed:', error);
       setFiles(prev =>
         prev.map(f =>
           f.id === file.id

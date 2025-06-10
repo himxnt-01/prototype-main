@@ -4,16 +4,20 @@
 
 // Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-
+// If your editor shows errors for Deno imports, please follow the Deno setup guide
+// mentioned above. This code is correct for the Supabase Deno runtime.
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 
 console.log("Hello from Functions!")
 
-// Define a type for the expected request body (e.g., audio URL, track ID)
+// Define a type for the expected webhook payload from Supabase
 interface AnalyzeAudioRequest {
-  audioUrl: string;
-  trackId?: string; // Optional: if you want to update a specific track
+  record: {
+    id: string; // Changed from trackId to match Supabase webhook
+    audio_url: string; // Changed from audioUrl to match Supabase webhook
+  };
 }
 
 // Define a type for the expected structure of the service account key
@@ -34,15 +38,22 @@ interface ServiceAccountKey {
 // Define a type for the Gemini API response structure (simplified)
 interface GeminiAnalysisResult {
   // Define fields based on your prompt, e.g.:
-  Key?: string; // Changed from key to Key to match example
-  BPM?: number; // Changed from bpm to BPM to match example
-  Genre?: string[]; // Changed from genre to Genre to match example
-  SubGenre?: string[]; // Added SubGenre to match prompt
-  Mood?: string[]; // Changed from mood to Mood to match example
-  Instruments?: string[]; // Changed from instruments to Instruments to match example
-  VocalType?: string; // Added VocalType to match prompt
-  ExplicitContent?: boolean; // Added ExplicitContent to match prompt
-  OverallDescription?: string; // Added OverallDescription to match prompt
+  Key?: string;
+  BPM?: number;
+  Genre?: string[];
+  SubGenre?: string[];
+  Mood?: string[];
+  Instruments?: string[];
+  VocalType?: string;
+  ExplicitContent?: boolean;
+  OverallDescription?: string;
+  EmotionalArc?: string;
+  Language?: string;
+  Harmony?: string;
+  ChordProgression?: string;
+  LyricalTheme?: string[];
+  CulturalFusion?: string[];
+  HistoricalPeriod?: string;
 }
 
 // --- Google Auth Helper ---
@@ -70,26 +81,10 @@ async function getGoogleAccessToken(serviceAccountKeyJson: string): Promise<stri
   async function importKeyFromString(pemKey: string) {
     const pemHeader = "-----BEGIN PRIVATE KEY-----";
     const pemFooter = "-----END PRIVATE KEY-----";
-
-    console.log(`importKeyFromString: Original pemKey length: ${pemKey.length}, first 70 chars: '${pemKey.substring(0,70)}...'`);
-
-    // 1. Remove header and footer
-    let base64Key = pemKey.replace(pemHeader, "").replace(pemFooter, "");
-    console.log(`importKeyFromString: base64Key length after header/footer removal: ${base64Key.length}, first 70 chars: '${base64Key.substring(0,70)}...'`);
-
-    // 2. Remove all newline characters
-    base64Key = base64Key.replace(/\\n/g, ""); // First, remove literal \\n if any were missed (unlikely here after JSON.parse)
-    base64Key = base64Key.replace(/\n/g, ""); // Then remove actual newlines
-    console.log(`importKeyFromString: base64Key length after newline removal: ${base64Key.length}, first 70 chars: '${base64Key.substring(0,70)}...'`);
-    
-    // 3. Remove any other whitespace just in case
-    base64Key = base64Key.replace(/\s/g, "");
-    console.log(`importKeyFromString: Processed base64Key for atob length: ${base64Key.length}, first 70 chars: '${base64Key.substring(0,70)}...'`);
-
-
+    // Keep console logs for now for debugging if needed
+    let base64Key = pemKey.replace(pemHeader, "").replace(pemFooter, "").replace(/\\n/g, "").replace(/\n/g, "").replace(/\s/g, "");
     try {
       const binaryDer = Uint8Array.from(atob(base64Key), c => c.charCodeAt(0));
-      console.log(`importKeyFromString: binaryDer length: ${binaryDer.length}`);
       return await crypto.subtle.importKey(
         "pkcs8",
         binaryDer,
@@ -98,11 +93,7 @@ async function getGoogleAccessToken(serviceAccountKeyJson: string): Promise<stri
         ["sign"]
       );
     } catch (e) {
-      console.error("Error importing key:", e);
-      console.error(`importKeyFromString (in catch): Original pemKey length: ${pemKey.length}`);
-      console.error(`importKeyFromString (in catch): Processed base64Key for atob length: ${base64Key.length}`);
-      console.error(`importKeyFromString (in catch): Processed base64Key (first 70 chars): '${base64Key.substring(0,70)}...'`);
-      // If atob failed, binaryDer might not be defined or relevant here.
+      console.error("Error importing key:", e.message);
       throw new Error("Failed to import private key for JWT signing.");
     }
   }
@@ -146,36 +137,51 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  console.log(`MY_TEST_VARIABLE from Deno.env: ${Deno.env.get('MY_TEST_VARIABLE')}`);
-
   try {
     // 1. Get the Gemini Service Account Key from environment variables
     const geminiServiceAccountKeyJson = Deno.env.get('GEMINI_SERVICE_ACCOUNT_KEY');
 
     if (!geminiServiceAccountKeyJson) {
       console.error('GEMINI_SERVICE_ACCOUNT_KEY environment variable not set.');
-      return new Response(JSON.stringify({ error: 'Gemini service account key not configured for the function.' }), {
+      // NOTE: This error is the one you were seeing locally.
+      // Ensure you have set the secret correctly using:
+      // npx supabase secrets set --env-file ./path/to/your/env/file
+      // And that `npx supabase start` is run AFTER setting the secret.
+      return new Response(JSON.stringify({ error: 'Service account key not configured.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // 2. Parse request body
-    if (req.headers.get("content-type") !== "application/json") {
+    // 2. Parse request body - updated to match expected webhook format
+    if (!req.headers.get("content-type")?.includes("application/json")) {
         return new Response(JSON.stringify({ error: "Request body must be JSON" }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
     const body: AnalyzeAudioRequest = await req.json();
-    const { audioUrl, trackId } = body;
+    // Accommodate both direct calls and trigger-based calls
+    const record = body.record
+    const trackId = record?.id;
+    const audioUrl = record?.audio_url;
 
-    if (!audioUrl) {
-      return new Response(JSON.stringify({ error: 'audioUrl is required in the request body.' }), {
+
+    if (!audioUrl || !trackId) {
+      return new Response(JSON.stringify({ error: '`record` object with `id` and `audio_url` is required.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+     // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    // Set analysis status to 'processing'
+    await supabaseClient.from('tracks').update({ analysis_status: 'processing' }).eq('id', trackId);
+
 
     // 3. Get Google Access Token
     console.log("Attempting to get Google access token...");
@@ -183,32 +189,50 @@ serve(async (req: Request) => {
     console.log("Successfully obtained Google access token.");
 
     // 4. Call Vertex AI Gemini API
-    const vertexApiUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/mvpasap/locations/us-central1/publishers/google/models/gemini-2.5-flash-preview-05-20:streamGenerateContent`;
+    // Corrected endpoint to non-streaming for a single JSON response
+    const vertexApiUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/mvpasap/locations/us-central1/publishers/google/models/gemini-2.5-flash-preview-05-20:generateContent`;
 
     // Modified prompt to refer to "the provided audio"
     const instructionPrompt = `
-Analyze the provided audio and output the information as a JSON object with the following keys:
-- Key (e.g., "C Major", "A Minor")
-- BPM (Beats Per Minute, e.g., 120)
-- Genre (e.g., ["Electronic", "Techno", "Ambient"])
-- SubGenre (e.g., ["Deep House", "Progressive Trance"])
-- Mood (e.g., ["Energetic", "Dark", "Melancholic"])
-- Instruments (e.g., ["Synthesizer", "Drum Machine", "Bass Guitar"])
-- VocalType (e.g., "Male Vocals", "Female Vocals", "Instrumental", "Vocal Samples")
-- ExplicitContent (true or false)
-- OverallDescription (A brief 1-2 sentence summary of the track's vibe and characteristics)
+Analyze the provided audio and generate a single, valid JSON object.
 
-Example JSON output format:
+Your response MUST contain all of the following keys. If you cannot determine the value for a key, you MUST return \`null\` for that key's value. Do not omit any keys from the JSON object.
+
+- Key
+- BPM
+- Genre
+- SubGenre
+- Mood
+- LyricalTheme
+- Instruments
+- VocalType
+- Language
+- Harmony
+- ChordProgression
+- EmotionalArc
+- CulturalFusion
+- HistoricalPeriod
+- ExplicitContent
+- OverallDescription
+
+Example of a complete response with a null value:
 {
   "Key": "A Minor",
   "BPM": 125,
   "Genre": ["Electronic", "House"],
   "SubGenre": ["Deep House"],
   "Mood": ["Groovy", "Uplifting"],
+  "LyricalTheme": null,
   "Instruments": ["Drum Machine", "Synthesizer", "Bass"],
   "VocalType": "Vocal Samples",
+  "Language": "Instrumental",
+  "Harmony": "Diatonic",
+  "ChordProgression": "Am7-Gmaj7-Cmaj7-Fmaj7",
+  "EmotionalArc": "Builds steadily from a minimal intro to a euphoric peak.",
+  "CulturalFusion": [],
+  "HistoricalPeriod": "2020s",
   "ExplicitContent": false,
-  "OverallDescription": "A groovy deep house track with prominent basslines and uplifting synth melodies."
+  "OverallDescription": "A groovy deep house track with prominent basslines."
 }
     `;
 
@@ -228,7 +252,7 @@ Example JSON output format:
         },
       ],
       generationConfig: {
-        // "response_mime_type": "application/json", // Enable this for strict JSON output
+        "response_mime_type": "application/json", // Enable this for strict JSON output
         "temperature": 0.3,
         "topP": 0.95,
         "topK": 40
@@ -247,180 +271,111 @@ Example JSON output format:
 
     if (!geminiResponse.ok) {
       const errorBody = await geminiResponse.text();
-      console.error('Vertex AI API Error:', geminiResponse.status, errorBody);
-      return new Response(JSON.stringify({ error: `Vertex AI API Error: ${geminiResponse.status} ${errorBody}` }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.error("Gemini API Error Response:", errorBody);
+       await supabaseClient.from('tracks').update({ 
+        analysis_status: 'error',
+        error_message: `Gemini API failed with status ${geminiResponse.status}: ${errorBody}`
+      }).eq('id', trackId);
+      // Pass the full error body for better debugging
+      throw new Error(`Gemini API request failed with status ${geminiResponse.status}: ${errorBody}`);
     }
 
-    const responseText = await geminiResponse.text();
-    let fullTextResponse = "";
+    // 5. Process and save the analysis
+    // Since using the non-streaming endpoint, the response is a JSON object, not a text stream.
+    const responseJson = await geminiResponse.json();
+    console.log("Raw Gemini Response JSON:", JSON.stringify(responseJson, null, 2));
+
+    // The actual analysis is nested inside the response object.
+    const analysisText = responseJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!analysisText) {
+        await supabaseClient.from('tracks').update({ 
+            analysis_status: 'error',
+            error_message: 'Could not find analysis text in Gemini response.'
+        }).eq('id', trackId);
+        throw new Error('Could not find analysis text in Gemini response. Full response: ' + JSON.stringify(responseJson));
+    }
+
+    let analysisResult: GeminiAnalysisResult;
     try {
-        const parts = JSON.parse(responseText);
-        for (const part of parts) {
-            if (part.candidates && part.candidates[0].content && part.candidates[0].content.parts) {
-                for (const textPart of part.candidates[0].content.parts) {
-                    if (textPart.text) {
-                        fullTextResponse += textPart.text;
-                    }
-                }
-            }
-        }
+        analysisResult = JSON.parse(analysisText);
     } catch (e) {
-        console.error("Error parsing Gemini streaming response:", e);
-        console.error("Raw Gemini response text:", responseText);
-        return new Response(JSON.stringify({ error: 'Error parsing Gemini response.', details: responseText }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        await supabaseClient.from('tracks').update({ 
+            analysis_status: 'error',
+            error_message: `Failed to parse JSON from Gemini: ${e.message}`
+        }).eq('id', trackId);
+        throw new Error(`Failed to parse JSON: ${e.message}`);
     }
 
-    console.log('Raw Gemini response:', fullTextResponse);
+    console.log("Parsed Gemini Analysis:", analysisResult);
 
-    let analysisResult: GeminiAnalysisResult = {};
-    try {
-      const jsonMatch = fullTextResponse.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch && jsonMatch[1]) {
-        analysisResult = JSON.parse(jsonMatch[1]);
-      } else {
-        analysisResult = JSON.parse(fullTextResponse);
+    // Helper function to ensure a value is an array
+    const ensureArray = (value: string | string[] | null | undefined): string[] | null => {
+      if (Array.isArray(value)) {
+        return value;
       }
-      console.log('Parsed Gemini analysis:', analysisResult);
-    } catch (e) {
-      console.error('Error parsing extracted JSON from Gemini response:', e);
-      console.error('Full text response was:', fullTextResponse);
-      return new Response(JSON.stringify({ error: 'Could not parse analysis from Gemini.', details: fullTextResponse }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 6. TODO: Update Supabase `tracks` table with `analysisResult` using `trackId` if provided
-    if (trackId && Object.keys(analysisResult).length > 0) {
-      const { createClient } = await import('npm:@supabase/supabase-js@2'); // Using npm specifier for Deno
-      
-      // Use environment variables for URL and Key
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-      if (!supabaseUrl || !supabaseServiceRoleKey) {
-        console.error('Supabase URL or Service Role Key not configured via environment variables.');
-        console.error(`SUPABASE_URL found: ${!!supabaseUrl}, SUPABASE_SERVICE_ROLE_KEY found: ${!!supabaseServiceRoleKey}`);
-        // Return an error or handle appropriately if configuration is missing
-        return new Response(JSON.stringify({ error: 'Supabase client configuration missing.' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } else {
-        // Log the resolved URL and a confirmation that the key is set (without logging the full key)
-        console.log(`Supabase Client Initializing with URL from env: ${supabaseUrl}`);
-        console.log(`Supabase Service Role Key from env is SET. Length: ${supabaseServiceRoleKey.length}`);
-
-        const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
-
-        // Expand the updateObject to include all relevant analysis fields
-        const updateObject = {
-          bpm: analysisResult.BPM,
-          key: analysisResult.Key,
-          genre: analysisResult.Genre,
-          instruments: analysisResult.Instruments,
-          vocal_type: analysisResult.VocalType,
-          explicit_content: analysisResult.ExplicitContent,
-          moods: analysisResult.Mood, // Storing the Mood array directly into the JSONB field
-          // SubGenre and OverallDescription from Gemini are not mapped yet as there are no direct columns.
-          analysis_status: "completed", // Set status to "completed"
-          updated_at: new Date().toISOString(),
-        };
-
-        console.log(`Attempting to update Supabase track with ID: ${trackId} with Data:`, updateObject);
-
-        if (!trackId) {
-          console.warn("No trackId provided, skipping Supabase update. Gemini analysis result:", analysisResult);
-          // If no trackId, we might just return the analysis and not attempt an update.
-          // Or, this case should have been handled earlier if trackId is mandatory for this function's purpose.
-          return new Response(
-            JSON.stringify({ success: true, message: "Analysis complete, no trackId provided for update.", data: analysisResult }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
-        // @ts-ignore: Check if supabaseClient is defined
-        if (typeof supabaseClient === 'undefined') {
-            console.error("supabaseClient is not defined. Cannot update track.");
-            return new Response(JSON.stringify({ success: false, error: "Internal server error: Supabase client not configured.", trackId: trackId }), {
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-        }
-
-        // @ts-ignore: supabaseClient will be used here
-        const { data: updatedTrack, error: updateError } = await supabaseClient
-          .from('tracks')
-          .update(updateObject) // Using the new simplified object
-          .eq('id', trackId) 
-          .select();
-
-        if (updateError && Object.keys(updateError).length > 0) { 
-          console.error('!!! Supabase update FAILED. Error object received:', updateError);
-          const errorDetailString = JSON.stringify(updateError, null, 2);
-          console.error('Supabase update error object (stringified):', errorDetailString);
-          console.error('Supabase update error message property:', updateError.message);
-          console.error('Supabase update error details property:', updateError.details);
-          console.error('Supabase update error hint property:', updateError.hint);
-          console.error('Supabase update error code property:', updateError.code);
-          console.error('Attempting to return 500 error response to client...');
-          
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: 'Failed to update track in Supabase.', 
-              details: updateError.message || 'No specific error message. Raw error object was not empty but lacked typical fields.',
-              rawError: updateError, // Send the raw error object
-              trackId: trackId 
-            }),
-            { 
-              status: 500, // Internal Server Error
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            }
-          );
-        } else if (updateError) { // Handles the case where updateError might be an empty object {}
-          console.error('!!! Supabase update FAILED. Received an empty error object or an error with no keys:', updateError);
-          console.error('Attempting to return 500 error response to client for empty/unknown error object...');
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: 'Failed to update track in Supabase. Received an undecipherable error object.',
-              details: 'The error object from Supabase was empty or did not contain standard error fields.',
-              rawError: updateError, // Send the raw error object
-              trackId: trackId,
-            }),
-            {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            }
-          );
-        }
-
-        console.log('Supabase update successful. Updated track data:', updatedTrack);
-
-        // Return success response with Gemini data and updated track confirmation
-        return new Response(
-          JSON.stringify({ success: true, data: analysisResult, trackId: trackId, updatedTrackData: updatedTrack }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (typeof value === 'string') {
+        // If it's a non-empty string, put it in an array. Otherwise, it's likely meant to be empty.
+        return value ? [value] : null;
       }
+      return null; // Return null for null, undefined, or other types
+    };
+
+    // 6. Map Gemini response to Supabase table columns, ensuring array types are correct
+    const updateData = {
+      key: analysisResult.Key,
+      bpm: analysisResult.BPM,
+      genre: ensureArray(analysisResult.Genre),
+      // `moods` in the table is `jsonb`. Gemini's `Mood` is likely a string array.
+      moods: ensureArray(analysisResult.Mood),
+      instruments: ensureArray(analysisResult.Instruments),
+      vocal_type: analysisResult.VocalType,
+      explicit_content: analysisResult.ExplicitContent,
+      // Storing OverallDescription in a new 'description' column.
+      // IMPORTANT: You will need to add this column to your 'tracks' table.
+      description: analysisResult.OverallDescription,
+      // Add the new detailed fields
+      language: analysisResult.Language,
+      emotional_arc: analysisResult.EmotionalArc,
+      harmony: analysisResult.Harmony,
+      chord_progression: analysisResult.ChordProgression,
+      lyrical_theme: ensureArray(analysisResult.LyricalTheme),
+      cultural_fusion: ensureArray(analysisResult.CulturalFusion),
+      historical_period: analysisResult.HistoricalPeriod,
+      analysis_status: 'completed',
+      updated_at: new Date().toISOString(),
+      error_message: null, // Clear any previous errors
+    };
+
+    // 7. Update the track in Supabase
+    const { data, error } = await supabaseClient
+      .from('tracks')
+      .update(updateData)
+      .eq('id', trackId)
+      .select();
+
+    if (error) {
+      console.error('Supabase update error:', error);
+       await supabaseClient.from('tracks').update({ 
+        analysis_status: 'error',
+        error_message: `Supabase update failed: ${error.message}`
+      }).eq('id', trackId);
+      throw new Error(`Supabase update failed: ${error.message}`);
     }
+
+    console.log("Successfully updated track in Supabase:", data);
+
+    // 8. Return the successful analysis
+    return new Response(JSON.stringify({ success: true, analysis: analysisResult }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
 
   } catch (error) {
-    console.error('Unhandled error in Edge Function:', error);
-    let errorMessage = "An unexpected error occurred.";
-    if (error instanceof Error) {
-        errorMessage = error.message;
-    }
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    console.error("An unexpected error occurred:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 })
