@@ -1,8 +1,52 @@
-// src/lib/drafts.ts (Your Zustand store definition for useDraftsStore)
+// src/lib/drafts.ts
 
 import { create } from 'zustand';
 import { Draft } from '@/types/draft';
 import { supabase } from '@/lib/supabase';
+import { Track } from '@/types/track';
+
+// Helper function from friend's version to convert a track to a draft
+const trackToDraft = (track: any): Draft => {
+  return {
+    id: track.id,
+    user_id: track.user_id,
+    title: track.title || '',
+    artist: track.artist || 'Unknown Artist',
+    audio_url: track.audio_url,
+    cover_art_url: track.cover_art_url,
+    is_published: track.is_published || false,
+    analysis_status: track.analysis_status || 'pending',
+    error_message: track.error_message,
+    created_at: track.created_at,
+    updated_at: track.updated_at,
+    lastModified: track.updated_at || track.created_at,
+    progress: 50, // Placeholder, can be calculated
+    metadata: {
+      bpm: track.bpm,
+      key: track.key,
+      genre: Array.isArray(track.genre) ? track.genre : (track.genre ? [track.genre] : []),
+      subgenre: track.subgenre,
+      moods: track.moods || [],
+      instruments: track.instruments || [],
+      vocal_type: track.vocal_type,
+      explicit_content: track.explicit_content,
+      description: track.description,
+      emotional_arc: track.emotional_arc,
+      language: track.language,
+      harmony: track.harmony,
+      chord_progression: track.chord_progression,
+      lyrical_theme: track.lyrical_theme,
+      cultural_fusion: track.cultural_fusion,
+      historical_period: track.historical_period,
+    },
+    rights: track.rights || { writers: [], publishers: [], masterOwners: [] },
+    lyrics: track.lyrics,
+    tags: track.tags || [],
+    status: track.status || { phase: 'draft', clearance: false, monetization: false, public: false, flags: [] },
+    mixes: track.mixes,
+    licensing: track.licensing,
+  };
+};
 
 interface DraftsState {
   drafts: Draft[];
@@ -10,8 +54,11 @@ interface DraftsState {
   isDetailsOpen: boolean;
   isSelectionMode: boolean;
   selectedDraftIds: Set<string>;
-  setDrafts: (drafts: Draft[]) => void;
+  isLoading: boolean;
+  error: string | null;
+  
   fetchDrafts: () => Promise<void>;
+  addDraft: (draft: Draft) => void;
   subscribeToChanges: () => () => void;
   selectDraft: (id: string) => void;
   closeDetails: () => void;
@@ -20,9 +67,7 @@ interface DraftsState {
   selectAllDrafts: () => void;
   clearSelection: () => void;
   updateDraft: (id: string, updatedDraft: Partial<Draft>) => void;
-  publishDraft: (id: string, updatedDraft: Partial<Draft>) => Promise<void>;
-  isLoading: boolean;
-  error: string | null;
+  publishDraft: (id: string) => Promise<void>;
 }
 
 export const useDraftsStore = create<DraftsState>((set, get) => ({
@@ -33,7 +78,6 @@ export const useDraftsStore = create<DraftsState>((set, get) => ({
   selectedDraftIds: new Set(),
   isLoading: true,
   error: null,
-  setDrafts: (drafts) => set({ drafts }),
   
   fetchDrafts: async () => {
     set({ isLoading: true, error: null });
@@ -41,121 +85,106 @@ export const useDraftsStore = create<DraftsState>((set, get) => ({
       const { data, error } = await supabase
         .from('tracks')
         .select('*')
+        .eq('is_published', false) // Only fetch drafts
         .order('created_at', { ascending: false });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
-      // Map Supabase data to Draft type
-      const mappedDrafts: Draft[] = data.map((track: any) => ({
-        ...track,
-        // Add any necessary transformations here, e.g.:
-        artist: track.artist_id || 'Unknown Artist',
-        lastModified: track.updated_at || track.created_at,
-        progress: 50, // Placeholder
-      }));
-
+      const mappedDrafts: Draft[] = data.map(trackToDraft);
       set({ drafts: mappedDrafts, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
-      console.error("Error fetching drafts:", error);
     }
+  },
+
+  addDraft: (draft: Draft) => {
+    set(state => ({
+      drafts: [draft, ...state.drafts],
+    }));
   },
 
   subscribeToChanges: () => {
     const channel = supabase
-      .channel('drafts-realtime-channel')
-      .on<Draft>(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tracks' },
+      .channel('drafts-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tracks' },
         (payload) => {
-          console.log('Realtime change received:', payload);
-          const currentDrafts = get().drafts;
-          
-          if (payload.eventType === 'INSERT') {
-            const newDraft = payload.new as any;
-            const mappedDraft: Draft = {
-              ...newDraft,
-              artist: newDraft.user_id || 'Unknown Artist',
-              lastModified: newDraft.updated_at || newDraft.created_at,
-              progress: 50,
-            };
-            set({ drafts: [mappedDraft, ...currentDrafts] });
-          }
-
-          if (payload.eventType === 'UPDATE') {
-            const updatedDraft = payload.new as any;
-            const mappedDraft: Draft = {
-              ...updatedDraft,
-              artist: updatedDraft.user_id || 'Unknown Artist',
-              lastModified: updatedDraft.updated_at || updatedDraft.created_at,
-              progress: 50,
-            };
-            set({
-              drafts: currentDrafts.map((d) => (d.id === mappedDraft.id ? mappedDraft : d)),
-            });
-          }
+          console.log('Change received!', payload);
+          // Re-fetch drafts to reflect changes
+          get().fetchDrafts();
         }
       )
       .subscribe();
 
+    // Return the unsubscribe function
     return () => {
       supabase.removeChannel(channel);
     };
   },
 
-  selectDraft: (id) => set({ selectedDraftId: id, isDetailsOpen: true }),
-  closeDetails: () => set({ isDetailsOpen: false }),
-  toggleSelectionMode: () => set((state) => ({
-    isSelectionMode: !state.isSelectionMode,
-    selectedDraftIds: new Set()
-  })),
-  toggleDraftSelection: (id) => set((state) => {
-    const newSelection = new Set(state.selectedDraftIds);
-    if (newSelection.has(id)) {
-      newSelection.delete(id);
-    } else {
-      newSelection.add(id);
-    }
-    return { selectedDraftIds: newSelection };
-  }),
-  selectAllDrafts: () => set((state) => ({
-    selectedDraftIds: new Set(state.drafts.map(draft => draft.id))
-  })),
-  updateDraft: (id, updatedValues) => set((state) => ({
-    drafts: state.drafts.map((draft) =>
-      draft.id === id ? { ...draft, ...updatedValues, lastModified: new Date().toISOString() } : draft
-    )
-  })),
-  publishDraft: async (id, updatedValues) => {
-    set({ isLoading: true, error: null });
+  selectDraft: (id: string) => {
+    set({ selectedDraftId: id, isDetailsOpen: true });
+  },
+
+  closeDetails: () => {
+    set({ isDetailsOpen: false, selectedDraftId: null });
+  },
+
+  toggleSelectionMode: () => {
+    set((state) => ({
+      isSelectionMode: !state.isSelectionMode,
+      selectedDraftIds: new Set(), // Clear selection when toggling mode
+    }));
+  },
+
+  toggleDraftSelection: (id: string) => {
+    set((state) => {
+      const newSelection = new Set(state.selectedDraftIds);
+      if (newSelection.has(id)) {
+        newSelection.delete(id);
+      } else {
+        newSelection.add(id);
+      }
+      return { selectedDraftIds: newSelection };
+    });
+  },
+
+  selectAllDrafts: () => {
+    set((state) => {
+      const allDraftIds = new Set(state.drafts.map(d => d.id));
+      return { selectedDraftIds: allDraftIds };
+    });
+  },
+
+  clearSelection: () => {
+    set({ selectedDraftIds: new Set() });
+  },
+
+  updateDraft: (id: string, updatedDraft: Partial<Draft>) => {
+    set((state) => ({
+      drafts: state.drafts.map((draft) =>
+        draft.id === id ? { ...draft, ...updatedDraft, lastModified: new Date().toISOString() } : draft
+      ),
+    }));
+  },
+
+  publishDraft: async (id: string) => {
     try {
       const { data, error } = await supabase
         .from('tracks')
-        .update({ ...updatedValues, is_published: true, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
+        .update({ is_published: true, status: { phase: 'published', public: true } })
+        .eq('id', id);
 
-      if (error) {
-        throw error;
-      }
-
-      // Remove from drafts list and close details panel
-      set((state) => ({
-        drafts: state.drafts.filter((d) => d.id !== id),
-        isDetailsOpen: state.selectedDraftId === id ? false : state.isDetailsOpen,
+      if (error) throw error;
+      
+      // Remove from local state
+      set(state => ({
+        drafts: state.drafts.filter(d => d.id !== id),
         selectedDraftId: state.selectedDraftId === id ? null : state.selectedDraftId,
-        isLoading: false,
       }));
 
     } catch (error: any) {
-      set({ error: error.message, isLoading: false });
-      console.error("Error publishing draft:", error);
-      // Re-throw to inform the calling component
-      throw error;
+      set({ error: error.message });
+      console.error("Failed to publish draft:", error);
     }
   },
-  clearSelection: () => set({ selectedDraftIds: new Set() }),
 }));

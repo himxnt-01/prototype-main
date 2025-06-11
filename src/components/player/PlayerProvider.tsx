@@ -8,7 +8,11 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 import { useTracksStore } from "@/lib/tracks";
 
-export function PlayerProvider() {
+interface PlayerProviderProps {
+  children: React.ReactNode;
+}
+
+export function PlayerProvider({ children }: PlayerProviderProps) {
   const { currentTrack, isPlaying, isExpanded, isMinimized, toggleMinimized, playTrack } = usePlayerStore();
   const [playerType, setPlayerType] = useState<'none' | 'modern' | 'expanded' | 'minimized'>('none');
   const { tracks } = useTracksStore();
@@ -27,31 +31,28 @@ export function PlayerProvider() {
     }
   }, [currentTrack, isExpanded, isMinimized, isPlaying]);
   
-  if (playerType === 'none') return null;
-  
-  if (playerType === 'minimized') {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        className={cn(
-          "fixed bottom-4 right-4 z-50",
-          "shadow-md",
-          isDarkMode 
-            ? "bg-zinc-900/95 backdrop-blur-md border-zinc-800" 
-            : "bg-white/95 backdrop-blur-md border-zinc-200"
-        )}
-        onClick={toggleMinimized}
-      >
-        <Music className="h-4 w-4 mr-2" />
-        Show Player
-      </Button>
-    );
-  }
-  
-  if (playerType === 'expanded') {
-    return <ExpandedPlayer />;
-  }
-  
-  return <ModernAudioPlayer />;
+  return (
+    <>
+      {children}
+      {playerType === 'minimized' && (
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            "fixed bottom-4 right-4 z-50",
+            "shadow-md",
+            isDarkMode 
+              ? "bg-zinc-900/95 backdrop-blur-md border-zinc-800" 
+              : "bg-white/95 backdrop-blur-md border-zinc-200"
+          )}
+          onClick={toggleMinimized}
+        >
+          <Music className="h-4 w-4 mr-2" />
+          Show Player
+        </Button>
+      )}
+      {playerType === 'expanded' && <ExpandedPlayer />}
+      {playerType === 'modern' && <ModernAudioPlayer />}
+    </>
+  );
 }
