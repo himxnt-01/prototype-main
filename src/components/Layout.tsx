@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Sidebar } from "./Sidebar/index";
 import { SearchBar } from "./SearchBar";
 import { useSidebarCollapse } from "@/hooks/useSidebarCollapse";
-import { useLocation } from "@/hooks/useLocation"; // <--- NEW: Import useLocation
+import { useLocation } from "react-router-dom"; // <--- UPDATED: Import from react-router-dom
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,7 +12,8 @@ interface LayoutProps {
 
 export function Layout({ children, className }: LayoutProps) {
   const { isCollapsed } = useSidebarCollapse();
-  const { currentPath } = useLocation(); // <--- NEW: Get the currentPath
+  const location = useLocation(); // <--- UPDATED: Use the hook from react-router-dom
+  const currentPath = location.pathname; // <--- UPDATED: Get pathname from location
 
   // <--- NEW: Determine if the current path is an authentication path
   const isAuthPage = currentPath.startsWith("/auth/");

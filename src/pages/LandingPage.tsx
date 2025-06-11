@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "@/hooks/useLocation";
+import { Link, useNavigate } from "react-router-dom";
 import { Zap, Search, Loader2, Music, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ interface SongResult {
 }
 
 export function LandingPage() {
-  const { navigate } = useLocation();
+  const navigate = useNavigate();
   const [hoveredSide, setHoveredSide] = useState<'rights' | 'licensors' | null>(null);
   const [logoError, setLogoError] = useState(false);
   
@@ -178,12 +178,8 @@ export function LandingPage() {
                 <span>Manage rights and metadata</span>
               </li>
             </ul>
-            <Button 
-              size="lg" 
-              className="w-full"
-              onClick={() => navigate("/tracks")}
-            >
-              Enter Catalog Management
+            <Button asChild size="lg" className="w-full">
+              <Link to="/tracks">Enter Catalog Management</Link>
             </Button>
           </div>
 
@@ -221,12 +217,8 @@ export function LandingPage() {
               </li>
             </ul>
             <div className="space-y-4">
-              <Button 
-                size="lg" 
-                className="w-full"
-                onClick={() => navigate("/discover")}
-              >
-                Discover Music
+              <Button asChild size="lg" className="w-full">
+                <Link to="/discover">Discover Music</Link>
               </Button>
               
               <Button 

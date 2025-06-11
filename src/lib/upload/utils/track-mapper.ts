@@ -64,16 +64,39 @@ export const mapSupabaseTrackToLocalTrack = (supabaseTrackData: any): Track => {
   };
 
   return {
-    id: supabaseTrackData.id, // Supabase ID is a string (UUID)
+    // Core Draft fields from Supabase
+    id: supabaseTrackData.id,
+    created_at: supabaseTrackData.created_at || new Date().toISOString(),
+    updated_at: supabaseTrackData.updated_at,
     title: supabaseTrackData.title || "Untitled Track",
-    artist: supabaseTrackData.artist_id || "Unknown Artist",
+    user_id: supabaseTrackData.user_id,
     audio_url: supabaseTrackData.audio_url || "",
     is_published: supabaseTrackData.is_published ?? false,
-    created_at: supabaseTrackData.created_at || new Date().toISOString(),
+    analysis_status: supabaseTrackData.analysis_status,
+    error_message: supabaseTrackData.error_message,
+    
+    // Gemini Analysis Fields (with defaults)
+    bpm: supabaseTrackData.bpm,
+    key: supabaseTrackData.key,
+    genre: supabaseTrackData.genre,
+    subgenre: supabaseTrackData.subgenre,
+    moods: supabaseTrackData.moods,
+    instruments: supabaseTrackData.instruments,
+    vocal_type: supabaseTrackData.vocal_type,
+    explicit_content: supabaseTrackData.explicit_content,
+    description: supabaseTrackData.description,
+    emotional_arc: supabaseTrackData.emotional_arc,
+    language: supabaseTrackData.language,
+    harmony: supabaseTrackData.harmony,
+    chord_progression: supabaseTrackData.chord_progression,
+    lyrical_theme: supabaseTrackData.lyrical_theme,
+    cultural_fusion: supabaseTrackData.cultural_fusion,
+    historical_period: supabaseTrackData.historical_period,
+    
+    // Legacy/UI fields (mapped or with defaults)
+    artist: supabaseTrackData.user_id || "Unknown Artist",
+    lastModified: supabaseTrackData.updated_at || supabaseTrackData.created_at,
 
-    genre: supabaseTrackData.genre || "Uncategorized",
-    key: supabaseTrackData.key || "C Major",
-    bpm: supabaseTrackData.bpm || 0,
     duration: supabaseTrackData.duration || "0:00",
     metadata: {
       ...defaultMetadata,

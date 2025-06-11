@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { useLocation } from "@/hooks/useLocation";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   Compass, 
@@ -20,8 +20,6 @@ interface DiscoverSidebarProps {
 }
 
 export function DiscoverSidebar({ currentTab, onTabChange }: DiscoverSidebarProps) {
-  const { navigate } = useLocation();
-
   const sidebarItems = [
     { id: "discover", label: "Discover", icon: Compass },
     { id: "search", label: "Search Catalog", icon: Search },
@@ -37,14 +35,10 @@ export function DiscoverSidebar({ currentTab, onTabChange }: DiscoverSidebarProp
   return (
     <div className="h-full w-64 border-r border-border bg-card flex flex-col">
       <div className="flex items-center h-16 px-6 border-b border-border">
-        <Button 
-          variant="ghost" 
-          className="flex items-center gap-2 p-0 h-auto"
-          onClick={() => navigate("/")}
-        >
+        <Link to="/" className="flex items-center gap-2 text-foreground hover:text-foreground">
           <img src="/zen-logo.png" alt="Zen" className="h-6 w-6" />
           <span className="text-lg font-semibold">Zen</span>
-        </Button>
+        </Link>
       </div>
 
       <div className="flex-1 py-4 px-2 space-y-1 overflow-auto">

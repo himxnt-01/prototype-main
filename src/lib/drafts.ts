@@ -20,6 +20,7 @@ interface DraftsState {
   selectAllDrafts: () => void;
   clearSelection: () => void;
   updateDraft: (id: string, updatedDraft: Partial<Draft>) => void;
+  publishDraft: (id: string, updatedDraft: Partial<Draft>) => Promise<void>;
   isLoading: boolean;
   error: string | null;
 }
@@ -124,8 +125,37 @@ export const useDraftsStore = create<DraftsState>((set, get) => ({
   })),
   updateDraft: (id, updatedValues) => set((state) => ({
     drafts: state.drafts.map((draft) =>
-      draft.id === id ? { ...draft, ...updatedValues } : draft
+      draft.id === id ? { ...draft, ...updatedValues, lastModified: new Date().toISOString() } : draft
     )
   })),
+  publishDraft: async (id, updatedValues) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('tracks')
+        .update({ ...updatedValues, is_published: true, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // Remove from drafts list and close details panel
+      set((state) => ({
+        drafts: state.drafts.filter((d) => d.id !== id),
+        isDetailsOpen: state.selectedDraftId === id ? false : state.isDetailsOpen,
+        selectedDraftId: state.selectedDraftId === id ? null : state.selectedDraftId,
+        isLoading: false,
+      }));
+
+    } catch (error: any) {
+      set({ error: error.message, isLoading: false });
+      console.error("Error publishing draft:", error);
+      // Re-throw to inform the calling component
+      throw error;
+    }
+  },
   clearSelection: () => set({ selectedDraftIds: new Set() }),
 }));

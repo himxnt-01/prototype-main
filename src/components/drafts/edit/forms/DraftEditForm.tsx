@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDraftsStore } from "@/lib/drafts";
 import { Draft } from "@/types/draft";
 import { TabList, TabTrigger, TabContent } from "@/components/ui/custom-tabs";
@@ -22,9 +23,10 @@ const EDIT_TABS = [
 type EditTab = typeof EDIT_TABS[number]["id"];
 
 export function DraftEditForm() {
-  const { drafts, selectedDraftId, updateDraft } = useDraftsStore();
+  const { drafts, selectedDraftId, publishDraft } = useDraftsStore();
+  const navigate = useNavigate();
   const [currentTab, setCurrentTab] = useState<EditTab>("metadata");
-  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [draftState, setDraftState] = useState<Draft | null>(null);
   const { setIsReleased, setHasLoadedRights } = useDraftFormStore();
 
@@ -32,8 +34,10 @@ export function DraftEditForm() {
     const draft = drafts.find(d => d.id === selectedDraftId);
     if (draft) {
       setDraftState({ ...draft });
+      // Set a default "released" status, since it's not in the DB
+      setIsReleased("no");
     }
-  }, [selectedDraftId, drafts]);
+  }, [selectedDraftId, drafts, setIsReleased]);
 
   useEffect(() => {
     // Reset form state when tab changes
@@ -44,9 +48,22 @@ export function DraftEditForm() {
 
   if (!draftState) return null;
 
-  const handleSave = () => {
-    updateDraft(draftState.id, draftState);
-    setIsDirty(false);
+  const handleSave = async () => {
+    if (!draftState) return;
+    setIsSaving(true);
+    try {
+      // We only need to pass the values that can be edited.
+      // The `publishDraft` function handles adding `is_published` and `updated_at`.
+      // We also exclude `artist` as it's a client-side derived field.
+      const { id, created_at, lastModified, progress, user_id, artist, ...valuesToUpdate } = draftState;
+      await publishDraft(draftState.id, valuesToUpdate);
+      navigate('/tracks');
+    } catch (error) {
+      console.error("Failed to save and publish draft:", error);
+      // Here you could show an error toast to the user
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleChange = (changes: Partial<Draft>) => {
@@ -54,7 +71,6 @@ export function DraftEditForm() {
       ...prev!,
       ...changes
     }));
-    setIsDirty(true);
   };
 
   const handleTabChange = (tab: EditTab) => {
@@ -84,7 +100,7 @@ export function DraftEditForm() {
         <div className="flex items-center gap-2 py-2">
           <SaveButton 
             onSave={handleSave}
-            isDirty={isDirty}
+            isSaving={isSaving}
           />
           {currentTab === "status" && (
             <SaveToLibraryButton draft={draftState} />

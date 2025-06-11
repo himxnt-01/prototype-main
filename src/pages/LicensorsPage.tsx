@@ -13,14 +13,20 @@ import {
   Pause, 
   Heart, 
   ShoppingCart, 
-  ChevronLeft 
+  ChevronLeft,
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocation } from "@/hooks/useLocation";
+import { useNavigate } from "react-router-dom";
 import { tracks as mockTracks } from "@/data/tracks";
+import { ArtistsPage } from "./ArtistsPage";
+import { MarketplacePage } from "./MarketplacePage";
+import { InboxPage } from "./InboxPage";
+import { ProjectsPage } from "./ProjectsPage";
 
 export function LicensorsPage() {
-  const { navigate } = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentTab, setCurrentTab] = useState("discover");
   const [playingTrackId, setPlayingTrackId] = useState<number | null>(null);
@@ -45,6 +51,83 @@ export function LicensorsPage() {
       setCartItems(cartItems.filter(itemId => itemId !== id));
     } else {
       setCartItems([...cartItems, id]);
+    }
+  };
+
+  const renderView = () => {
+    switch (currentTab) {
+      case "discover":
+        return (
+          <TabsContent value="discover" className="mt-0">
+            <div className="space-y-8">
+              <section>
+                <h2 className="text-2xl font-semibold mb-4">Featured Tracks</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredTracks.slice(0, 4).map((track) => (
+                    <TrackCard 
+                      key={track.id}
+                      track={track}
+                      isPlaying={playingTrackId === track.id}
+                      isInCart={cartItems.includes(track.id)}
+                      onPlay={() => togglePlayTrack(track.id)}
+                      onAddToCart={() => toggleCart(track.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h2 className="text-2xl font-semibold mb-4">All Tracks</h2>
+                <ScrollArea className="h-[calc(100vh-20rem)]">
+                  <div className="space-y-4">
+                    {filteredTracks.map((track) => (
+                      <TrackRow
+                        key={track.id}
+                        track={track}
+                        isPlaying={playingTrackId === track.id}
+                        isInCart={cartItems.includes(track.id)}
+                        onPlay={() => togglePlayTrack(track.id)}
+                        onAddToCart={() => toggleCart(track.id)}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </section>
+            </div>
+          </TabsContent>
+        );
+      case "genres":
+        return (
+          <TabsContent value="genres">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {["Electronic", "Rock", "Pop", "Hip Hop", "R&B", "Jazz", "Classical", "Ambient"].map((genre) => (
+                <GenreCard key={genre} genre={genre} />
+              ))}
+            </div>
+          </TabsContent>
+        );
+      case "moods":
+        return (
+          <TabsContent value="moods">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {["Energetic", "Calm", "Happy", "Sad", "Inspirational", "Mysterious", "Epic", "Romantic"].map((mood) => (
+                <MoodCard key={mood} mood={mood} />
+              ))}
+            </div>
+          </TabsContent>
+        );
+      case "collections":
+        return (
+          <TabsContent value="collections">
+            <div className="text-center py-12 text-muted-foreground">
+              <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No Collections Yet</h3>
+              <p>Sign in to create and save your music collections</p>
+            </div>
+          </TabsContent>
+        );
+      default:
+        return null;
     }
   };
 
@@ -115,67 +198,7 @@ export function LicensorsPage() {
               </div>
             </div>
 
-            <TabsContent value="discover" className="mt-0">
-              <div className="space-y-8">
-                <section>
-                  <h2 className="text-2xl font-semibold mb-4">Featured Tracks</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredTracks.slice(0, 4).map((track) => (
-                      <TrackCard 
-                        key={track.id}
-                        track={track}
-                        isPlaying={playingTrackId === track.id}
-                        isInCart={cartItems.includes(track.id)}
-                        onPlay={() => togglePlayTrack(track.id)}
-                        onAddToCart={() => toggleCart(track.id)}
-                      />
-                    ))}
-                  </div>
-                </section>
-
-                <section>
-                  <h2 className="text-2xl font-semibold mb-4">All Tracks</h2>
-                  <ScrollArea className="h-[calc(100vh-20rem)]">
-                    <div className="space-y-4">
-                      {filteredTracks.map((track) => (
-                        <TrackRow
-                          key={track.id}
-                          track={track}
-                          isPlaying={playingTrackId === track.id}
-                          isInCart={cartItems.includes(track.id)}
-                          onPlay={() => togglePlayTrack(track.id)}
-                          onAddToCart={() => toggleCart(track.id)}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </section>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="genres">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {["Electronic", "Rock", "Pop", "Hip Hop", "R&B", "Jazz", "Classical", "Ambient"].map((genre) => (
-                  <GenreCard key={genre} genre={genre} />
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="moods">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {["Energetic", "Calm", "Happy", "Sad", "Inspirational", "Mysterious", "Epic", "Romantic"].map((mood) => (
-                  <MoodCard key={mood} mood={mood} />
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="collections">
-              <div className="text-center py-12 text-muted-foreground">
-                <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No Collections Yet</h3>
-                <p>Sign in to create and save your music collections</p>
-              </div>
-            </TabsContent>
+            {renderView()}
           </Tabs>
         </div>
       </div>

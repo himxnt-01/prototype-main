@@ -21,7 +21,7 @@ export function MetadataTab({ track }: MetadataTabProps) {
         <div className="grid grid-cols-2 gap-6">
           <FormField label="Title" icon={Music}>
             <Input
-              value={track.title}
+              value={track.title || ""}
               readOnly
               className="bg-muted/50"
             />
@@ -29,7 +29,7 @@ export function MetadataTab({ track }: MetadataTabProps) {
 
           <FormField label="Artist" icon={User}>
             <Input
-              value={track.artist}
+              value={track.artist || ""}
               readOnly
               className="bg-muted/50"
             />
@@ -81,7 +81,7 @@ export function MetadataTab({ track }: MetadataTabProps) {
         <div className="grid grid-cols-2 gap-6">
           <FormField label="Genre" icon={Disc3}>
             <Input
-              value={track.genre}
+              value={track.genre || ""}
               readOnly
               className="bg-muted/50"
             />
@@ -89,7 +89,7 @@ export function MetadataTab({ track }: MetadataTabProps) {
 
           <FormField label="BPM" icon={Timer}>
             <Input
-              value={track.bpm.toString()}
+              value={track.bpm?.toString() || ""}
               readOnly
               className="bg-muted/50"
             />
@@ -97,7 +97,7 @@ export function MetadataTab({ track }: MetadataTabProps) {
 
           <FormField label="Key" icon={Music2}>
             <Input
-              value={track.key}
+              value={track.key || ""}
               readOnly
               className="bg-muted/50"
             />
@@ -105,7 +105,7 @@ export function MetadataTab({ track }: MetadataTabProps) {
 
           <FormField label="Duration" icon={Clock}>
             <Input
-              value={track.duration}
+              value={track.duration || ""}
               readOnly
               className="bg-muted/50"
             />

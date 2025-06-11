@@ -9,7 +9,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PlayerProvider } from "@/components/player/PlayerProvider";
 
-import { useLocation } from '@/hooks/useLocation'; // Assuming this hook provides 'navigate'
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { navigate } = useLocation(); // Destructure navigate from useLocation
+  const navigate = useNavigate();
 
   // Define which roles go to which section
   const rightsHoldersRoles = ['independent-artist', 'signed-artist', 'label', 'publisher'];
@@ -119,10 +119,10 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-4 text-sm text-muted-foreground">
-            Don't have an account? {' '}
-            <a href="/auth/signup" className="text-primary hover:underline">
+            Don't have an account?{' '}
+            <Link to="/auth/signup" className="text-primary hover:underline">
               Sign up
-            </a>
+            </Link>
           </p>
         </div>
         <PlayerProvider />

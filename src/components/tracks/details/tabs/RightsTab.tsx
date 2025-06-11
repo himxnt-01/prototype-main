@@ -8,8 +8,10 @@ interface RightsTabProps {
 }
 
 export function RightsTab({ track }: RightsTabProps) {
-  // Use track rights or generate mock data if not available
-  const rights = track.rights || generateMockRights(track);
+  // Safely access rights data, providing default empty arrays
+  const writers = track.rights?.writers || [];
+  const publishers = track.rights?.publishers || [];
+  const masterOwners = track.rights?.masterOwners || [];
 
   return (
     <div className="p-6">
@@ -32,7 +34,7 @@ export function RightsTab({ track }: RightsTabProps) {
             </div>
 
             <div className="space-y-3">
-              {rights.writers?.map((writer, index) => (
+              {writers.map((writer, index) => (
                 <div 
                   key={index}
                   className="p-3 rounded-lg bg-card border border-border"
@@ -65,7 +67,7 @@ export function RightsTab({ track }: RightsTabProps) {
             </div>
 
             <div className="space-y-3">
-              {rights.publishers?.map((publisher, index) => (
+              {publishers.map((publisher, index) => (
                 <div 
                   key={index}
                   className="p-3 rounded-lg bg-card border border-border"
@@ -98,7 +100,7 @@ export function RightsTab({ track }: RightsTabProps) {
             </div>
 
             <div className="space-y-3">
-              {rights.masterOwners?.map((owner, index) => (
+              {masterOwners.map((owner, index) => (
                 <div 
                   key={index}
                   className="p-3 rounded-lg bg-card border border-border"
@@ -122,55 +124,4 @@ export function RightsTab({ track }: RightsTabProps) {
       </div>
     </div>
   );
-}
-
-// Generate mock rights data based on track ID
-function generateMockRights(track: Track) {
-  // Use track ID to create deterministic but varied mock data
-  const seed = track.id % 5;
-  
-  const publishers = [
-    { name: "Universal Music Publishing", share: 100, territories: ["Worldwide"] },
-    { name: "Sony Music Publishing", share: 70, territories: ["Worldwide"] },
-    { name: "Warner Chappell Music", share: 50, territories: ["Worldwide"] },
-    { name: "Kobalt Music Publishing", share: 60, territories: ["Worldwide"] },
-    { name: "BMG Rights Management", share: 80, territories: ["Worldwide"] }
-  ];
-  
-  const masterOwners = [
-    { name: "Universal Music Group", share: 100, territories: ["Worldwide"] },
-    { name: "Sony Music Entertainment", share: 100, territories: ["Worldwide"] },
-    { name: "Warner Music Group", share: 100, territories: ["Worldwide"] },
-    { name: "Believe Digital", share: 100, territories: ["Worldwide"] },
-    { name: "AWAL", share: 100, territories: ["Worldwide"] }
-  ];
-  
-  const writers = [
-    [
-      { name: track.artist, role: "Composer/Lyricist", share: 100 }
-    ],
-    [
-      { name: track.artist, role: "Composer", share: 50 },
-      { name: "Jane Smith", role: "Lyricist", share: 50 }
-    ],
-    [
-      { name: track.artist, role: "Composer", share: 40 },
-      { name: "John Doe", role: "Lyricist", share: 40 },
-      { name: "Max Producer", role: "Producer", share: 20 }
-    ],
-    [
-      { name: track.artist, role: "Composer/Lyricist", share: 70 },
-      { name: "Sarah Williams", role: "Composer", share: 30 }
-    ],
-    [
-      { name: track.artist, role: "Composer/Lyricist", share: 60 },
-      { name: "Mike Johnson", role: "Producer", share: 40 }
-    ]
-  ];
-  
-  return {
-    publishers: [publishers[seed]],
-    masterOwners: [masterOwners[seed]],
-    writers: writers[seed]
-  };
 }

@@ -37,10 +37,10 @@ import { MoodsPage } from "./discover/MoodsPage";
 import { CollectionsPage } from "./discover/CollectionsPage";
 import { CheckoutPage } from "./discover/CheckoutPage";
 import { SearchCatalogPage } from "./discover/SearchCatalogPage";
-import { useLocation } from "@/hooks/useLocation";
+import { useNavigate } from "react-router-dom";
 
 export function DiscoverPage() {
-  const { navigate } = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentTab, setCurrentTab] = useState("discover");
   const [playingTrackId, setPlayingTrackId] = useState<number | null>(null);

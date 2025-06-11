@@ -10,7 +10,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PlayerProvider } from "@/components/player/PlayerProvider";
 
-import { useLocation } from '@/hooks/useLocation'; // Assuming this hook provides 'navigate'
+import { Link, useNavigate } from 'react-router-dom';
 
 // All 7 role options with kebab-case values for Supabase
 const roleOptions = [
@@ -31,7 +31,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null); // State for success messages
 
-  const { navigate } = useLocation(); // Destructure navigate from useLocation
+  const navigate = useNavigate(); // Use the standard hook // Destructure navigate from useLocation
 
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -163,10 +163,10 @@ export default function SignupPage() {
           </form>
 
           <p className="mt-4 text-sm text-muted-foreground">
-            Already have an account? {' '}
-            <a href="/auth/login" className="text-primary hover:underline">
+            Already have an account?{' '}
+            <Link to="/auth/login" className="text-primary hover:underline">
               Log in
-            </a>
+            </Link>
           </p>
         </div>
         <PlayerProvider />

@@ -1,34 +1,53 @@
 import { create } from 'zustand';
 import { Track } from '@/types/track';
-import { tracks as mockTracks } from '@/data/tracks';
-import { randomSongs } from '@/data/randomSongs';
+import { supabase } from './supabase'; // Import supabase client
 
 interface TracksState {
   tracks: Track[];
-  selectedTrackId: number | null;
+  selectedTrackId: string | null; // Changed to string for UUID
   isDetailsOpen: boolean;
   isSelectionMode: boolean;
-  selectedTrackIds: Set<number>;
+  selectedTrackIds: Set<string>; // Changed to string for UUID
+  fetchTracks: () => Promise<void>; // Add fetch function
   setTracks: (tracks: Track[]) => void;
-  selectTrack: (trackId: number) => void;
+  selectTrack: (trackId: string) => void; // Changed to string for UUID
   closeDetails: () => void;
   toggleSelectionMode: () => void;
-  toggleTrackSelection: (id: number) => void;
+  toggleTrackSelection: (id: string) => void; // Changed to string for UUID
   selectAllTracks: () => void;
   clearSelection: () => void;
   isLoading: boolean;
   error: string | null;
 }
 
-// Combine original mock tracks with random songs
-const allTracks = [...mockTracks, ...randomSongs];
-
-export const useTracksStore = create<TracksState>((set) => ({
-  tracks: allTracks,
+export const useTracksStore = create<TracksState>((set, get) => ({
+  tracks: [], // Start with empty array
   selectedTrackId: null,
   isDetailsOpen: false,
   isSelectionMode: false,
   selectedTrackIds: new Set(),
+  isLoading: true, // Set loading to true initially
+  error: null,
+
+  fetchTracks: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('tracks')
+        .select('*')
+        .eq('is_published', true); // Fetch only published tracks
+
+      if (error) throw error;
+      
+      // Here, you might need to map the data if the table structure
+      // doesn't perfectly match the Track type. For now, we assume it does.
+      set({ tracks: data || [], isLoading: false });
+    } catch (error: any) {
+      console.error("Error fetching tracks:", error);
+      set({ error: error.message, isLoading: false });
+    }
+  },
+
   setTracks: (tracks) => set({ tracks }),
   selectTrack: (trackId) => set({ selectedTrackId: trackId, isDetailsOpen: true }),
   closeDetails: () => set({ isDetailsOpen: false }),
@@ -45,10 +64,10 @@ export const useTracksStore = create<TracksState>((set) => ({
     }
     return { selectedTrackIds: newSelection };
   }),
-  selectAllTracks: () => set((state) => ({
-    selectedTrackIds: new Set(state.tracks.map(track => track.id))
-  })),
+  selectAllTracks: () => set((state) => {
+    // Ensure track.id is correctly accessed
+    const allTrackIds = state.tracks.map(track => track.id);
+    return { selectedTrackIds: new Set(allTrackIds) };
+  }),
   clearSelection: () => set({ selectedTrackIds: new Set() }),
-  isLoading: false,
-  error: null,
 }));

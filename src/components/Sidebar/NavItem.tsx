@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 import {
@@ -6,49 +5,48 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useLocation } from "@/hooks/useLocation";
+import { NavLink } from "react-router-dom";
 
 interface NavItemProps {
   icon: LucideIcon;
   label: React.ReactNode;
   path: string;
   isCollapsed: boolean;
-  isActive?: boolean;
 }
 
-export function NavItem({ icon: Icon, label, path, isCollapsed, isActive }: NavItemProps) {
-  const { navigate } = useLocation();
+export function NavItem({ icon: Icon, label, path, isCollapsed }: NavItemProps) {
+  const linkContent = (
+    <>
+      <Icon className={cn("h-4 w-4 shrink-0", !isCollapsed && "mr-2")} />
+      {!isCollapsed && (
+        <span className="truncate">{label}</span>
+      )}
+    </>
+  );
 
-  const button = (
-    <Button
-      variant="ghost"
-      className={cn(
-        "w-full justify-start transition-colors",
-        isCollapsed && "justify-center px-2",
+  const link = (
+    <NavLink
+      to={path}
+      className={({ isActive }) => cn(
+        "flex items-center p-2 rounded-md transition-colors w-full",
+        "hover:bg-muted text-muted-foreground hover:text-foreground",
+        isCollapsed ? "justify-center" : "justify-start",
         isActive && [
-          "bg-primary/10 text-primary hover:bg-primary/20",
+          "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary",
           "after:absolute after:right-0 after:top-1/2 after:-translate-y-1/2",
           "after:w-1 after:h-6 after:rounded-l-full after:bg-primary"
         ]
       )}
-      onClick={() => navigate(path)}
     >
-      <Icon className={cn(
-        "h-4 w-4 shrink-0",
-        !isCollapsed && "mr-2",
-        isActive && "text-primary"
-      )} />
-      {!isCollapsed && (
-        <span className="truncate">{label}</span>
-      )}
-    </Button>
+      {linkContent}
+    </NavLink>
   );
 
   if (isCollapsed) {
     return (
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
-          {button}
+          {link}
         </TooltipTrigger>
         <TooltipContent side="right" className="font-normal">
           {label}
@@ -57,5 +55,5 @@ export function NavItem({ icon: Icon, label, path, isCollapsed, isActive }: NavI
     );
   }
 
-  return button;
+  return link;
 }

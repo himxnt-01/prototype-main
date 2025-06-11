@@ -5,9 +5,22 @@ import { TrackDetails } from "./tracks/TrackDetails";
 import { useTracksStore } from "@/lib/tracks";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import React, { useEffect } from "react";
 
 export function TracksView() {
-  const { tracks, isDetailsOpen } = useTracksStore();
+  const { tracks, isDetailsOpen, fetchTracks, isLoading, error } = useTracksStore();
+
+  useEffect(() => {
+    fetchTracks();
+  }, [fetchTracks]);
+
+  if (isLoading) {
+    return <div>Loading tracks...</div>;
+  }
+
+  if (error) {
+    return <div>Error loading tracks: {error}</div>;
+  }
 
   return (
     <div className="h-[calc(100vh-4rem)] flex gap-6">

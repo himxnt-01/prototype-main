@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from '@/lib/supabase';
-import { useLocation } from "@/hooks/useLocation";
+import { useNavigate } from "react-router-dom";
 import { useDraftsStore } from "@/lib/drafts";
 import { createDummyDraft } from "@/lib/upload/utils/draft"; // <--- CORRECTED PATH: src/lib/upload/utils/draft.ts
 import { mapSupabaseTrackToLocalTrack } from "@/lib/upload/utils/track-mapper"; // <--- NEW & CORRECTED PATH
@@ -46,7 +46,7 @@ interface UploadFile {
 export function UploadPage() {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isCloudDialogOpen, setIsCloudDialogOpen] = useState(false);
-  const { navigate } = useLocation();
+  const navigate = useNavigate();
   const { setDrafts, drafts } = useDraftsStore();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {

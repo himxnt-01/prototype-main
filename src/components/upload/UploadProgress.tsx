@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, AlertCircle, CheckCircle2, Loader2, Upload, ExternalLink } from "lucide-react";
 import { useUploadStore } from "@/lib/upload";
-import { useLocation } from "@/hooks/useLocation";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { formatFileSize } from "@/lib/upload/utils/file";
 
 export function UploadProgress() {
   const { files, removeFile, clearFiles } = useUploadStore();
-  const { navigate } = useLocation();
+  const navigate = useNavigate();
   
   if (files.length === 0) return null;
 
@@ -36,12 +36,11 @@ export function UploadProgress() {
           </div>
           <div className="flex items-center gap-2">
             {allComplete && (
-              <Button 
-                size="sm"
-                onClick={() => navigate("/drafts")}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                View in Drafts
+              <Button asChild size="sm">
+                <Link to="/drafts">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View in Drafts
+                </Link>
               </Button>
             )}
             <Button 

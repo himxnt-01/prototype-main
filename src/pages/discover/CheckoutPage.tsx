@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { discoverTracks } from "@/data/discoverTracks";
-import { useLocation } from "@/hooks/useLocation";
+import { useNavigate, Link } from "react-router-dom";
 
 // Define usage types
 const USAGE_TYPES = [
@@ -51,7 +51,7 @@ interface CheckoutPageProps {
 }
 
 export function CheckoutPage({ cartItems }: CheckoutPageProps) {
-  const { navigate } = useLocation();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<'usage' | 'details' | 'payment' | 'confirmation'>('usage');
   const [usageType, setUsageType] = useState<string>("");
   const [otherUsageType, setOtherUsageType] = useState<string>("");
@@ -149,12 +149,10 @@ export function CheckoutPage({ cartItems }: CheckoutPageProps) {
       <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => navigate("/discover")}
-            >
-              <ChevronLeft className="h-5 w-5" />
+            <Button asChild variant="ghost" size="icon">
+              <Link to="/discover">
+                <ChevronLeft className="h-5 w-5" />
+              </Link>
             </Button>
             <div className="flex items-center gap-2">
               <img src="/zen-logo.png" alt="Zen Sync" className="h-8" />

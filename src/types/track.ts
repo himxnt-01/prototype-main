@@ -36,20 +36,46 @@ export interface ClientSideDummyDraft {
 import { Mix } from "./mix";
 
 export interface Track {
-  id: string;          // <--- CRITICAL: MUST be string for UUID
+  // Core Draft fields from Supabase
+  id: string; // Changed from number for UUID
+  created_at: string;
+  updated_at?: string; // Optional field
   title: string;
-  artist: string;
-  audio_url: string;   // <--- ADD THIS LINE
-  is_published: boolean; // <--- ADD THIS LINE
-  created_at: string;  // <--- ADD THIS LINE
-  genre: string;
-  key: string;
-  bpm: number;
+  user_id: string;
+  audio_url: string;
+  is_published: boolean;
+  analysis_status?: 'pending' | 'completed' | 'failed';
+  error_message?: string;
+  
+  // Gemini Analysis Fields
+  bpm?: number;
+  key?: string;
+  genre?: string;
+  subgenre?: string;
+  moods?: string[];
+  instruments?: string[];
+  vocal_type?: 'male' | 'female' | 'duet' | 'instrumental';
+  explicit_content?: boolean;
+  description?: string;
+  emotional_arc?: any; // Define more strictly if possible
+  language?: string;
+  harmony?: any;
+  chord_progression?: string;
+  lyrical_theme?: string;
+  cultural_fusion?: string;
+  historical_period?: string;
+  
+  // Legacy/UI fields (mapped or with defaults)
+  artist: string; // Mapped from user_id
+  progress: number;
+  lastModified: string; // Mapped from updated_at/created_at
+
   duration: string;
   metadata: TrackMetadata;
   tags: string[];
-  writers: string[];
+  writers: string[]; // Consider making this more structured, e.g., Writer[]
   lyrics: string;
+
   mixes?: Mix[];
   parentTrackId?: number;
   syncInfo?: SyncLicensingInfo;

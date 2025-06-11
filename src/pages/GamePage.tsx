@@ -1,20 +1,16 @@
 import { GameContainer } from '@/components/game/GameContainer';
 import { Button } from '@/components/ui/button';
-import { useLocation } from '@/hooks/useLocation';
+import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 
 export function GamePage() {
-  const { navigate } = useLocation();
-
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center gap-4 mb-6">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => navigate("/")}
-        >
-          <ChevronLeft className="h-5 w-5" />
+        <Button asChild variant="ghost" size="icon">
+          <Link to="/">
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
         </Button>
         <h1 className="text-2xl font-semibold">Space Explorer</h1>
       </div>
