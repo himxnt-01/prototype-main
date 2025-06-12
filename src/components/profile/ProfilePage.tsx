@@ -2,11 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
-import { useLocation } from "@/hooks/useLocation";
+import { useNavigate } from "react-router-dom";
 import { BulletproofProfile } from "./BulletproofProfile";
 
 export function ProfilePage() {
-  const { navigate } = useLocation();
+  const navigate = useNavigate();
 
   return (
     <div className="h-full flex flex-col">

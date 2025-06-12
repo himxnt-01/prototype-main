@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormField } from "../FormField";
+import { FormField } from "./FormField";
 import { Globe2, AlertTriangle } from "lucide-react";
 import { Draft } from "@/types/draft";
 
@@ -19,15 +19,15 @@ export function ContentInfo({ draft, onChange }: ContentInfoProps) {
       <FormField label="Language" icon={Globe2}>
         <Input
           placeholder="e.g., English"
-          value={draft.language || ""}
-          onChange={(e) => handleChange("language", e.target.value)}
+          value={draft.metadata?.language || ""}
+          onChange={(e) => onChange({ metadata: { ...draft.metadata, language: e.target.value } })}
         />
       </FormField>
 
       <FormField label="Explicit" icon={AlertTriangle}>
         <Select
-          value={draft.explicit_content ? "yes" : "no"}
-          onValueChange={(value) => handleChange("explicit_content", value === "yes")}
+          value={draft.metadata?.explicit_content ? "yes" : "no"}
+          onValueChange={(value) => onChange({ metadata: { ...draft.metadata, explicit_content: value === "yes" } })}
         >
           <SelectTrigger>
             <SelectValue />

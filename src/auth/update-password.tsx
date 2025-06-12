@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle } from 'lucide-react';
-import { useLocation } from '@/hooks/useLocation';
+import { useNavigate } from 'react-router-dom';
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('');
@@ -14,7 +14,7 @@ export default function UpdatePasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const { navigate } = useLocation();
+  const navigate = useNavigate();
 
   // Define which roles go to which section
   const rightsHoldersRoles = ['independent-artist', 'signed-artist', 'label', 'publisher'];

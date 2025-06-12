@@ -35,6 +35,7 @@ export interface Draft {
     lyrical_theme?: string;
     cultural_fusion?: string;
     historical_period?: string;
+    lyrics?: DraftLyrics;
   };
 
   // Rights Management (from friend)
@@ -87,7 +88,47 @@ export interface Draft {
 
 export type Writer = {
   name: string;
-  role: string;
-  share: number;
   email?: string;
 };
+
+export interface DraftMetadata {
+  title?: string;
+  artist?: string;
+  duration?: string;
+  bpm?: number;
+  key?: string;
+  genre?: string[];
+  subgenre?: string;
+  moods?: string[];
+  instruments?: string[];
+  vocal_type?: string;
+  explicit_content?: boolean;
+  description?: string;
+  emotional_arc?: string;
+  language?: string;
+  harmony?: string;
+  chord_progression?: string;
+  lyrical_theme?: string[];
+  cultural_fusion?: string[];
+  historical_period?: string;
+  lyrics?: DraftLyrics;
+}
+
+export interface DraftRights {
+  writers: { name: string; email?: string }[];
+  publishers: { name: string; email?: string }[];
+  masterOwners: { name: string; email?: string }[];
+}
+
+export interface DraftLyrics {
+  content: string;
+  // structure?: 'verse-chorus' | 'freestyle' | etc.;
+}
+
+export interface DraftStatus {
+  phase: 'draft' | 'submitted' | 'approved' | 'rejected' | 'published';
+  clearance: boolean;
+  monetization: boolean;
+  public: boolean;
+  flags: string[];
+}

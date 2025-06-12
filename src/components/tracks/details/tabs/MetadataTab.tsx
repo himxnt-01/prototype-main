@@ -1,10 +1,11 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormField } from "@/components/drafts/edit/forms/metadata/FormField";
+import { FormField } from "@/components/drafts/edit/forms/metadata/sections/FormField";
 import { Music, User, Barcode, Calendar, Disc3, Timer, Music2, Clock } from "lucide-react";
 import { Track } from "@/types/track";
 import { MUSIC_GENRES } from "@/data/constants";
+import { Badge } from "@/components/ui/badge";
 
 interface MetadataTabProps {
   track: Track;

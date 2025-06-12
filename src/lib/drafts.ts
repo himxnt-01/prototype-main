@@ -3,50 +3,7 @@
 import { create } from 'zustand';
 import { Draft } from '@/types/draft';
 import { supabase } from '@/lib/supabase';
-import { Track } from '@/types/track';
-
-// Helper function from friend's version to convert a track to a draft
-const trackToDraft = (track: any): Draft => {
-  return {
-    id: track.id,
-    user_id: track.user_id,
-    title: track.title || '',
-    artist: track.artist || 'Unknown Artist',
-    audio_url: track.audio_url,
-    cover_art_url: track.cover_art_url,
-    is_published: track.is_published || false,
-    analysis_status: track.analysis_status || 'pending',
-    error_message: track.error_message,
-    created_at: track.created_at,
-    updated_at: track.updated_at,
-    lastModified: track.updated_at || track.created_at,
-    progress: 50, // Placeholder, can be calculated
-    metadata: {
-      bpm: track.bpm,
-      key: track.key,
-      genre: Array.isArray(track.genre) ? track.genre : (track.genre ? [track.genre] : []),
-      subgenre: track.subgenre,
-      moods: track.moods || [],
-      instruments: track.instruments || [],
-      vocal_type: track.vocal_type,
-      explicit_content: track.explicit_content,
-      description: track.description,
-      emotional_arc: track.emotional_arc,
-      language: track.language,
-      harmony: track.harmony,
-      chord_progression: track.chord_progression,
-      lyrical_theme: track.lyrical_theme,
-      cultural_fusion: track.cultural_fusion,
-      historical_period: track.historical_period,
-    },
-    rights: track.rights || { writers: [], publishers: [], masterOwners: [] },
-    lyrics: track.lyrics,
-    tags: track.tags || [],
-    status: track.status || { phase: 'draft', clearance: false, monetization: false, public: false, flags: [] },
-    mixes: track.mixes,
-    licensing: track.licensing,
-  };
-};
+import { mapSupabaseTrackToDraft } from './upload/utils/track-mapper';
 
 interface DraftsState {
   drafts: Draft[];
@@ -66,7 +23,7 @@ interface DraftsState {
   toggleDraftSelection: (id: string) => void;
   selectAllDrafts: () => void;
   clearSelection: () => void;
-  updateDraft: (id: string, updatedDraft: Partial<Draft>) => void;
+  updateDraft: (id: string, updates: Partial<Draft>) => Promise<void>;
   publishDraft: (id: string) => Promise<void>;
 }
 
@@ -90,7 +47,7 @@ export const useDraftsStore = create<DraftsState>((set, get) => ({
 
       if (error) throw error;
       
-      const mappedDrafts: Draft[] = data.map(trackToDraft);
+      const mappedDrafts: Draft[] = data.map(mapSupabaseTrackToDraft);
       set({ drafts: mappedDrafts, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
@@ -159,27 +116,91 @@ export const useDraftsStore = create<DraftsState>((set, get) => ({
     set({ selectedDraftIds: new Set() });
   },
 
-  updateDraft: (id: string, updatedDraft: Partial<Draft>) => {
-    set((state) => ({
-      drafts: state.drafts.map((draft) =>
-        draft.id === id ? { ...draft, ...updatedDraft, lastModified: new Date().toISOString() } : draft
+  updateDraft: async (id: string, updates: Partial<Draft>) => {
+    // 1. Optimistically update local state
+    set(state => ({
+      drafts: state.drafts.map(draft =>
+        draft.id === id ? { ...draft, ...updates, lastModified: new Date().toISOString() } : draft
       ),
     }));
+
+    // 2. Persist changes to Supabase, respecting the actual schema
+    const { artist, metadata, ...payloadForSupabase } = updates;
+    
+    // The 'artist' name is a display property in the app, not a DB column.
+    // The actual user/artist link is `user_id`, which shouldn't be updated here.
+    // We can ignore the 'artist' field in the update payload.
+
+    // If metadata is being updated, flatten its properties into the payload
+    if (metadata) {
+      for (const [key, value] of Object.entries(metadata)) {
+        (payloadForSupabase as any)[key] = value;
+      }
+    }
+
+    if (Object.keys(payloadForSupabase).length === 0) {
+      return; // Nothing to update
+    }
+
+    payloadForSupabase.updated_at = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('tracks')
+      .update(payloadForSupabase)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Failed to update draft:', error);
+      // Optional: revert local state change or show an error
+    }
   },
 
   publishDraft: async (id: string) => {
+    const draftToPublish = get().drafts.find(d => d.id === id);
+    if (!draftToPublish) {
+      const errorMsg = "Draft not found.";
+      set({ error: errorMsg });
+      console.error(errorMsg);
+      return;
+    }
+
     try {
+      // Create a clean payload for Supabase, strictly adhering to the DB schema.
+      const {
+        // Exclude fields that are not in the 'tracks' table or are handled differently.
+        artist,          // This is a UI-level field, not a DB column.
+        progress,        // UI-only field.
+        lastModified,    // UI-only field.
+        metadata,        // The contents of metadata will be flattened.
+        id,              // Should not be in the update payload itself.
+        user_id,         // Should not be changed on update.
+        created_at,      // Should not be changed on update.
+        
+        ...restOfDraft   // All other fields (like rights, tags, etc.) are included.
+      } = draftToPublish;
+
+      const trackData: { [key: string]: any; } = {
+        ...restOfDraft,
+        ...metadata, // Spread metadata fields into the top level.
+        is_published: true,
+        // The status object is now a column, so we ensure it's updated correctly.
+        status: { ...draftToPublish.status, phase: 'published', public: true },
+        updated_at: new Date().toISOString()
+      };
+      
       const { data, error } = await supabase
         .from('tracks')
-        .update({ is_published: true, status: { phase: 'published', public: true } })
-        .eq('id', id);
+        .update(trackData)
+        .eq('id', draftToPublish.id)
+        .select()
+        .single();
 
       if (error) throw error;
       
-      // Remove from local state
       set(state => ({
         drafts: state.drafts.filter(d => d.id !== id),
         selectedDraftId: state.selectedDraftId === id ? null : state.selectedDraftId,
+        isDetailsOpen: state.selectedDraftId === id ? false : state.isDetailsOpen,
       }));
 
     } catch (error: any) {
