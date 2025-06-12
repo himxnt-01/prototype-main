@@ -1,15 +1,14 @@
 import { Settings, BarChart3, Gamepad } from "lucide-react";
 import { SubSection } from "../SubSection";
 import { NavItem } from "../NavItem";
-import { useProfileNavigation } from "@/hooks/useProfileNavigation";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface SettingsSectionProps {
   isCollapsed: boolean;
 }
 
 export function SettingsSection({ isCollapsed }: SettingsSectionProps) {
-  const { navigateToProfile } = useProfileNavigation();
+  const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -32,7 +31,7 @@ export function SettingsSection({ isCollapsed }: SettingsSectionProps) {
       <NavItem
         icon={Settings}
         label="Profile & Settings"
-        onClick={navigateToProfile}
+        path="/profile"
         isCollapsed={isCollapsed}
         isActive={currentPath.includes("/profile")}
       />

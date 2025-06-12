@@ -79,6 +79,9 @@ export function AppRoutes() {
         <Route path="/supervisor/profile" element={<RoleBasedProfile />} />
         <Route path="/licensor/profile" element={<RoleBasedProfile />} />
 
+        {/* General profile route */}
+        <Route path="/profile" element={<RoleBasedProfile />} />
+
         {/* Other protected routes */}
         <Route path="/rights-holders" element={<RightsHoldersPage />} />
         <Route path="/tracks" element={<TracksView />} />
