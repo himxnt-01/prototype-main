@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { FormField } from "../FormField";
+import { FormField } from "./FormField";
 import { Music, User } from "lucide-react";
 import { Draft } from "@/types/draft";
 
@@ -15,6 +15,12 @@ export function BasicInfo({ draft, onChange }: BasicInfoProps) {
 
   return (
     <div className="space-y-6">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold">Basic Information</h2>
+        <p className="text-sm text-muted-foreground">
+          The essential details for your track.
+        </p>
+      </div>
       <div className="grid grid-cols-2 gap-6">
         <FormField label="Title" icon={Music}>
           <Input

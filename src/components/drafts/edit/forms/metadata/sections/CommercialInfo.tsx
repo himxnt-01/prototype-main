@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { FormField } from "../FormField";
+import { FormField } from "./FormField";
 import { Barcode, Calendar } from "lucide-react";
 import { Draft } from "@/types/draft";
 

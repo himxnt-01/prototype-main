@@ -26,15 +26,15 @@ SET row_security = off;
 -- Name: call_process_track_upload_function(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.call_process_track_upload_function() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.call_process_track_upload_function() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$DECLARE
   SUPABASE_URL TEXT := current_setting('supabase_url', true);
   SERVICE_ROLE_KEY TEXT := current_setting('supabase_service_role_key', true);
   FUNCTION_URL TEXT;
   HEADERS JSONB;
-  BODY_TO_SEND JSONB; -- Renamed to avoid conflict with response 'body'
-  RESPONSE_BODY TEXT; -- Changed from RESPONSE_TEXT to RESPONSE_BODY for clarity
+  BODY_TO_SEND JSONB;
+  RESPONSE_BODY TEXT;
   STATUS_CODE INT;
 BEGIN
   FUNCTION_URL := SUPABASE_URL || '/functions/v1/process-track-upload';
@@ -50,14 +50,7 @@ BEGIN
     'record', to_jsonb(NEW)
   );
 
-  -- *** CRITICAL CHANGE HERE: Select 'body' instead of 'content' ***
-  SELECT content::text, status -- <--- CORRECTED LINE
-INTO RESPONSE_BODY, STATUS_CODE
-FROM net.http_post(
-    url := FUNCTION_URL,
-    headers := HEADERS,
-    body := BODY_TO_SEND
-) AS r;
+  SELECT content::text, status INTO RESPONSE_BODY, STATUS_CODE FROM net.http_post(url := FUNCTION_URL, headers := HEADERS, body := BODY_TO_SEND) AS r;
 
   RAISE LOG 'Edge Function Response - Status: %, Body: %', STATUS_CODE, RESPONSE_BODY;
 
@@ -73,7 +66,7 @@ END;$$;
 -- Name: get_profile_columns(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_profile_columns() RETURNS TABLE(column_name text, data_type text)
+CREATE OR REPLACE FUNCTION public.get_profile_columns() RETURNS TABLE(column_name text, data_type text)
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -90,7 +83,7 @@ $$;
 -- Name: get_user_tracks(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_user_tracks(user_id_input uuid) RETURNS TABLE(id uuid, title text, user_id uuid)
+CREATE OR REPLACE FUNCTION public.get_user_tracks(user_id_input uuid) RETURNS TABLE(id uuid, title text, user_id uuid)
     LANGUAGE sql SECURITY DEFINER
     AS $$
   select id, title, user_id 
@@ -104,7 +97,7 @@ $$;
 -- Name: handle_new_track_upload(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.handle_new_track_upload() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.handle_new_track_upload() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 BEGIN
@@ -122,7 +115,7 @@ $$;
 -- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.handle_new_user() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 BEGIN
@@ -131,7 +124,7 @@ BEGIN
     NEW.id, -- The user ID from auth.users
     NEW.email, -- The email from auth.users
     (NEW.raw_user_meta_data ->> 'role')::text -- Extract 'role' from user_metadata
-  );
+  ) ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
 $$;
@@ -141,7 +134,7 @@ $$;
 -- Name: trigger_cyanite_analysis(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.trigger_cyanite_analysis() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.trigger_cyanite_analysis() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -158,7 +151,7 @@ $$;
 -- Name: trigger_cyanite_retry(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.trigger_cyanite_retry() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.trigger_cyanite_retry() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 DECLARE
@@ -192,7 +185,7 @@ $$;
 -- Name: update_profile_image_v2(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.update_profile_image_v2(p_user_id uuid, p_type text, p_url text) RETURNS jsonb
+CREATE OR REPLACE FUNCTION public.update_profile_image_v2(p_user_id uuid, p_type text, p_url text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 DECLARE
@@ -233,7 +226,7 @@ SET default_table_access_method = heap;
 -- Name: albums; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.albums (
+CREATE TABLE IF NOT EXISTS public.albums (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone,
@@ -250,14 +243,14 @@ CREATE TABLE public.albums (
 -- Name: artists; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.artists (
+CREATE TABLE IF NOT EXISTS public.artists (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    user_id uuid NOT NULL,
-    name text NOT NULL,
-    profile_picture_url text,
-    bio text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone
+    updated_at timestamp with time zone,
+    name text NOT NULL,
+    bio text,
+    profile_picture_url text,
+    user_id uuid
 );
 
 
@@ -265,15 +258,13 @@ CREATE TABLE public.artists (
 -- Name: labels; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.labels (
+CREATE TABLE IF NOT EXISTS public.labels (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    user_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone,
     name text NOT NULL,
     logo_url text,
-    description text,
-    website_url text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone
+    user_id uuid
 );
 
 
@@ -281,7 +272,7 @@ CREATE TABLE public.labels (
 -- Name: profile_images; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.profile_images (
+CREATE TABLE IF NOT EXISTS public.profile_images (
     id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     user_id uuid,
     type text NOT NULL,
@@ -296,68 +287,28 @@ CREATE TABLE public.profile_images (
 -- Name: profiles; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
     id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     user_id uuid,
-    role text,
     display_name text,
     bio text,
-    social_links jsonb DEFAULT '{}'::jsonb,
-    location jsonb DEFAULT '{}'::jsonb,
-    status text DEFAULT 'draft'::text,
+    city text,
+    country text,
+    instrument text,
+    education text,
+    experience text,
+    has_publishing_deal boolean,
+    publishing_company text,
+    social_links jsonb,
+    equipment text,
+    software text,
+    genres text,
+    influences text,
+    status text,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
     updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-    profile_picture text,
-    header_image text,
-    avatar_url text,
-    header_url text,
-    CONSTRAINT profiles_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text])))
-);
-
-
---
--- Name: profile_details; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.profile_details AS
- SELECT p.user_id,
-    p.display_name,
-    p.status,
-    p.created_at,
-    p.updated_at,
-    COALESCE(pp.url, ''::text) AS profile_picture,
-    COALESCE(hp.url, ''::text) AS header_image
-   FROM ((public.profiles p
-     LEFT JOIN public.profile_images pp ON (((p.user_id = pp.user_id) AND (pp.type = 'profile'::text))))
-     LEFT JOIN public.profile_images hp ON (((p.user_id = hp.user_id) AND (hp.type = 'header'::text))));
-
-
---
--- Name: tracks; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.tracks (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone,
-    title text NOT NULL,
-    artist_id uuid,
-    label_id uuid,
-    audio_url text NOT NULL,
-    cover_art_url text,
-    duration integer,
-    bpm integer,
-    key text,
-    instruments text[],
-    vocal_type text,
-    explicit_content boolean DEFAULT false NOT NULL,
-    is_published boolean DEFAULT false NOT NULL,
-    album_id uuid,
-    analysis_status text,
-    genre text[],
-    error_message text,
-    moods jsonb,
-    user_id uuid NOT NULL
+    profile_image text,
+    header_image text
 );
 
 
@@ -365,11 +316,11 @@ CREATE TABLE public.tracks (
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.users (
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+CREATE TABLE IF NOT EXISTS public.users (
     id uuid NOT NULL,
-    email text NOT NULL,
-    role text NOT NULL,
+    email character varying(255),
+    role text,
+    created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone
 );
 
@@ -479,6 +430,14 @@ ALTER TABLE ONLY public.profiles
 
 
 --
+-- Name: profiles profiles_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profiles
+    ADD CONSTRAINT profiles_user_id_key UNIQUE (user_id);
+
+
+--
 -- Name: tracks tracks_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -490,22 +449,21 @@ ALTER TABLE ONLY public.tracks
 -- Name: tracks tracks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.tracks
-    ADD CONSTRAINT tracks_pkey PRIMARY KEY (id);
+
 
 
 --
 -- Name: idx_tracks_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_tracks_user_id ON public.tracks USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_tracks_user_id ON public.tracks USING btree (user_id);
 
 
 --
 -- Name: profiles_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX profiles_user_id_idx ON public.profiles USING btree (user_id);
+CREATE INDEX IF NOT EXISTS profiles_user_id_idx ON public.profiles USING btree (user_id);
 
 
 --
@@ -513,7 +471,7 @@ CREATE INDEX profiles_user_id_idx ON public.profiles USING btree (user_id);
 --
 
 ALTER TABLE ONLY public.albums
-    ADD CONSTRAINT albums_artist_id_fkey FOREIGN KEY (artist_id) REFERENCES public.artists(id) ON DELETE SET NULL;
+    ADD CONSTRAINT albums_artist_id_fkey FOREIGN KEY (artist_id) REFERENCES public.artists(id);
 
 
 --
@@ -521,7 +479,7 @@ ALTER TABLE ONLY public.albums
 --
 
 ALTER TABLE ONLY public.albums
-    ADD CONSTRAINT albums_label_id_fkey FOREIGN KEY (label_id) REFERENCES public.labels(id) ON DELETE SET NULL;
+    ADD CONSTRAINT albums_label_id_fkey FOREIGN KEY (label_id) REFERENCES public.labels(id);
 
 
 --
@@ -529,7 +487,7 @@ ALTER TABLE ONLY public.albums
 --
 
 ALTER TABLE ONLY public.artists
-    ADD CONSTRAINT artists_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT artists_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
 
 
 --
@@ -537,7 +495,7 @@ ALTER TABLE ONLY public.artists
 --
 
 ALTER TABLE ONLY public.labels
-    ADD CONSTRAINT labels_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT labels_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
 
 
 --
@@ -545,7 +503,7 @@ ALTER TABLE ONLY public.labels
 --
 
 ALTER TABLE ONLY public.profile_images
-    ADD CONSTRAINT profile_images_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT profile_images_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
 
 
 --
@@ -553,7 +511,7 @@ ALTER TABLE ONLY public.profile_images
 --
 
 ALTER TABLE ONLY public.profiles
-    ADD CONSTRAINT profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
 
 
 --
@@ -577,7 +535,23 @@ ALTER TABLE ONLY public.tracks
 --
 
 ALTER TABLE ONLY public.tracks
-    ADD CONSTRAINT tracks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT tracks_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_id_fkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -595,11 +569,7 @@ CREATE POLICY "Enable delete for album owners" ON public.albums FOR DELETE TO au
 -- Name: tracks Enable delete for track owners; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Enable delete for track owners" ON public.tracks FOR DELETE TO authenticated USING (((EXISTS ( SELECT 1
-   FROM public.artists
-  WHERE ((artists.id = tracks.artist_id) AND (artists.user_id = auth.uid())))) OR (EXISTS ( SELECT 1
-   FROM public.labels
-  WHERE ((labels.id = tracks.label_id) AND (labels.user_id = auth.uid()))))));
+
 
 
 --
@@ -613,7 +583,7 @@ CREATE POLICY "Enable insert for authenticated users" ON public.albums FOR INSER
 -- Name: tracks Enable insert for authenticated users; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Enable insert for authenticated users" ON public.tracks FOR INSERT TO authenticated WITH CHECK ((auth.uid() IS NOT NULL));
+
 
 
 --
@@ -655,7 +625,7 @@ CREATE POLICY "Enable select for all" ON public.albums FOR SELECT USING ((auth.u
 -- Name: tracks Enable select for all; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Enable select for all" ON public.tracks FOR SELECT TO anon USING ((auth.uid() IS NOT NULL));
+
 
 
 --
@@ -712,15 +682,7 @@ CREATE POLICY "Enable update for owner" ON public.users FOR UPDATE TO authentica
 -- Name: tracks Enable update for track owners; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Enable update for track owners" ON public.tracks FOR UPDATE TO anon USING (((EXISTS ( SELECT 1
-   FROM public.artists
-  WHERE ((artists.id = tracks.artist_id) AND (artists.user_id = auth.uid())))) OR (EXISTS ( SELECT 1
-   FROM public.labels
-  WHERE ((labels.id = tracks.label_id) AND (labels.user_id = auth.uid())))))) WITH CHECK (((EXISTS ( SELECT 1
-   FROM public.artists
-  WHERE ((artists.id = tracks.artist_id) AND (artists.user_id = auth.uid())))) OR (EXISTS ( SELECT 1
-   FROM public.labels
-  WHERE ((labels.id = tracks.label_id) AND (labels.user_id = auth.uid()))))));
+
 
 
 --
@@ -741,7 +703,6 @@ CREATE POLICY "Users can delete their own profile" ON public.profiles FOR DELETE
 -- Name: tracks Users can insert own tracks; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can insert own tracks" ON public.tracks FOR INSERT WITH CHECK ((auth.uid() = artist_id));
 
 
 --
@@ -762,7 +723,7 @@ CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT
 -- Name: tracks Users can insert their own tracks; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can insert their own tracks" ON public.tracks FOR INSERT TO authenticated WITH CHECK ((auth.uid() = artist_id));
+
 
 
 --
@@ -783,7 +744,7 @@ CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE
 -- Name: tracks Users can view own tracks; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can view own tracks" ON public.tracks FOR SELECT USING ((auth.uid() = artist_id));
+
 
 
 --
@@ -804,7 +765,6 @@ CREATE POLICY "Users can view their own profile" ON public.profiles FOR SELECT U
 -- Name: tracks Users can view their own tracks; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can view their own tracks" ON public.tracks FOR SELECT TO authenticated USING ((auth.uid() = artist_id));
 
 
 --
@@ -846,4 +806,110 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 --
 -- PostgreSQL database dump complete
 --
+
+CREATE OR REPLACE VIEW public.profile_details AS
+ SELECT p.id,
+    p.user_id,
+    p.display_name,
+    p.bio,
+    p.city,
+    p.country,
+    p.instrument,
+    p.education,
+    p.experience,
+    p.has_publishing_deal,
+    p.publishing_company,
+    p.social_links,
+    p.equipment,
+    p.software,
+    p.genres,
+    p.influences,
+    p.status,
+    p.created_at,
+    p.updated_at,
+    u.role,
+    COALESCE(pp.url, ''::text) AS profile_picture,
+    COALESCE(hp.url, ''::text) AS header_image
+   FROM ((public.profiles p
+     LEFT JOIN public.users u ON ((p.user_id = u.id)))
+     LEFT JOIN public.profile_images pp ON (((p.user_id = pp.user_id) AND (pp.type = 'profile'::text))))
+     LEFT JOIN public.profile_images hp ON (((p.user_id = hp.user_id) AND (hp.type = 'header'::text)));
+
+CREATE POLICY "Allow authenticated users to read profiles" ON public.profiles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Enable CRUD for authenticated users only" ON public.tracks FOR ALL TO authenticated USING ((auth.uid() = user_id)) WITH CHECK ((auth.uid() = user_id));
+
+
+
+
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM postgres;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM postgres;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM postgres;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO service_role;
+GRANT ALL ON TABLE public.profiles TO service_role;
+-- -- -- GRANT ALL ON VIEW public.profile_details TO anon;
+-- -- -- GRANT ALL ON VIEW public.profile_details TO authenticated;
+-- -- -- GRANT ALL ON VIEW public.profile_details TO service_role;
+GRANT ALL ON TABLE public.tracks TO anon;
+GRANT ALL ON TABLE public.tracks TO authenticated;
+GRANT ALL ON TABLE public.tracks TO service_role;
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT ALL ON FUNCTION public.call_process_track_upload_function() TO anon;
+GRANT ALL ON FUNCTION public.call_process_track_upload_function() TO authenticated;
+GRANT ALL ON FUNCTION public.call_process_track_upload_function() TO service_role;
+GRANT ALL ON FUNCTION public.get_profile_columns() TO anon;
+GRANT ALL ON FUNCTION public.get_profile_columns() TO authenticated;
+GRANT ALL ON FUNCTION public.get_profile_columns() TO service_role;
+GRANT ALL ON FUNCTION public.get_user_tracks(user_id_input uuid) TO anon;
+GRANT ALL ON FUNCTION public.get_user_tracks(user_id_input uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.get_user_tracks(user_id_input uuid) TO service_role;
+GRANT ALL ON FUNCTION public.handle_new_track_upload() TO anon;
+GRANT ALL ON FUNCTION public.handle_new_track_upload() TO authenticated;
+GRANT ALL ON FUNCTION public.handle_new_track_upload() TO service_role;
+GRANT ALL ON FUNCTION public.handle_new_user() TO anon;
+GRANT ALL ON FUNCTION public.handle_new_user() TO authenticated;
+GRANT ALL ON FUNCTION public.handle_new_user() TO service_role;
+GRANT ALL ON FUNCTION public.trigger_cyanite_analysis() TO anon;
+GRANT ALL ON FUNCTION public.trigger_cyanite_analysis() TO authenticated;
+GRANT ALL ON FUNCTION public.trigger_cyanite_analysis() TO service_role;
+GRANT ALL ON FUNCTION public.trigger_cyanite_retry() TO anon;
+GRANT ALL ON FUNCTION public.trigger_cyanite_retry() TO authenticated;
+GRANT ALL ON FUNCTION public.trigger_cyanite_retry() TO service_role;
+GRANT ALL ON FUNCTION public.update_profile_image_v2(p_user_id uuid, p_type text, p_url text) TO anon;
+GRANT ALL ON FUNCTION public.update_profile_image_v2(p_user_id uuid, p_type text, p_url text) TO authenticated;
+GRANT ALL ON FUNCTION public.update_profile_image_v2(p_user_id uuid, p_type text, p_url text) TO service_role;
+GRANT ALL ON TABLE public.albums TO anon;
+GRANT ALL ON TABLE public.albums TO authenticated;
+GRANT ALL ON TABLE public.albums TO service_role;
+GRANT ALL ON TABLE public.artists TO anon;
+GRANT ALL ON TABLE public.artists TO authenticated;
+GRANT ALL ON TABLE public.artists TO service_role;
+GRANT ALL ON TABLE public.labels TO anon;
+GRANT ALL ON TABLE public.labels TO authenticated;
+GRANT ALL ON TABLE public.labels TO service_role;
+GRANT ALL ON TABLE public.profile_images TO anon;
+GRANT ALL ON TABLE public.profile_images TO authenticated;
+GRANT ALL ON TABLE public.profile_images TO service_role;
+GRANT ALL ON TABLE public.profiles TO anon;
+GRANT ALL ON TABLE public.profiles TO authenticated;
+GRANT ALL ON TABLE public.profiles TO service_role;
+-- GRANT ALL ON VIEW public.profile_details TO anon;
+-- GRANT ALL ON VIEW public.profile_details TO authenticated;
+-- GRANT ALL ON VIEW public.profile_details TO service_role;
+GRANT ALL ON TABLE public.tracks TO anon;
+GRANT ALL ON TABLE public.tracks TO authenticated;
+GRANT ALL ON TABLE public.tracks TO service_role;
+GRANT ALL ON TABLE public.users TO anon;
+GRANT ALL ON TABLE public.users TO authenticated;
+GRANT ALL ON TABLE public.users TO service_role;
 

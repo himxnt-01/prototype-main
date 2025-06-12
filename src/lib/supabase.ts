@@ -1,6 +1,26 @@
+// supabase.ts
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://lgtkfiwqyolgglganvxd.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndGtmaXdxeW9sZ2dsZ2FudnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2MDEyMjYsImV4cCI6MjA2NDE3NzIyNn0.mQonNrnKHFhQNZG2sYUdJVvvIm1RyeVWI3rFlGX3bZI';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Check for undefined values and throw error if missing
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("ERROR: Supabase configuration is incomplete!");
+  console.error("Make sure you have the following environment variables set in your .env file:");
+  console.error("VITE_SUPABASE_URL");
+  console.error("VITE_SUPABASE_ANON_KEY");
+  throw new Error("Supabase configuration is missing. Check your .env file.");
+}
+
+// Create the Supabase client with additional options
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  db: {
+    schema: 'public'
+  },
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});

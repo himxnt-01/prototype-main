@@ -10,8 +10,10 @@ import { NavLink } from "react-router-dom";
 interface NavItemProps {
   icon: LucideIcon;
   label: React.ReactNode;
-  path: string;
+  path: string; // Path is required for NavLink
+  onClick?: () => void; // onClick is optional
   isCollapsed: boolean;
+  isActive?: boolean; // isActive can be passed in, but NavLink handles it
 }
 
 export function NavItem({ icon: Icon, label, path, isCollapsed }: NavItemProps) {
@@ -27,6 +29,7 @@ export function NavItem({ icon: Icon, label, path, isCollapsed }: NavItemProps) 
   const link = (
     <NavLink
       to={path}
+      end // Ensures exact match for active route
       className={({ isActive }) => cn(
         "flex items-center p-2 rounded-md transition-colors w-full",
         "hover:bg-muted text-muted-foreground hover:text-foreground",

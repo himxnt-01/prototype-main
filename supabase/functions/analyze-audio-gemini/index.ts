@@ -15,8 +15,10 @@ console.log("Hello from Functions!")
 // Define a type for the expected webhook payload from Supabase
 interface AnalyzeAudioRequest {
   record: {
-    id: string; // Changed from trackId to match Supabase webhook
-    audio_url: string; // Changed from audioUrl to match Supabase webhook
+    id: string; 
+    audio_url: string;
+    // The trigger sends the entire track record, so other fields might be present
+    [key: string]: any;
   };
 }
 

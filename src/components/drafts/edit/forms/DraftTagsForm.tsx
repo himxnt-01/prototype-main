@@ -18,8 +18,10 @@ const Field = ({ label, children }: { label: string, children: React.ReactNode }
 );
 
 export function DraftTagsForm({ draft, onChange }: DraftTagsFormProps) {
-  const handleTagChange = (key: keyof Draft, value: any) => {
-    onChange({ [key]: value });
+  const metadata = draft.metadata || {};
+
+  const handleTagChange = (key: keyof Draft['metadata'], value: any) => {
+    onChange({ metadata: { ...metadata, [key]: value } });
   };
 
   return (
@@ -28,10 +30,10 @@ export function DraftTagsForm({ draft, onChange }: DraftTagsFormProps) {
         <SectionTitle>Primary Tags</SectionTitle>
         <div className="grid grid-cols-2 gap-6">
           <Field label="Key">
-            <p className="text-sm h-10 flex items-center">{draft.key || "-"}</p>
+            <p className="text-sm h-10 flex items-center">{metadata.key || "-"}</p>
           </Field>
           <Field label="Emotional Arc">
-            <p className="text-sm h-10 flex items-center">{draft.emotional_arc || "-"}</p>
+            <p className="text-sm h-10 flex items-center">{metadata.emotional_arc || "-"}</p>
           </Field>
         </div>
       </div>
@@ -41,14 +43,14 @@ export function DraftTagsForm({ draft, onChange }: DraftTagsFormProps) {
         <div className="grid grid-cols-2 gap-6">
           <Field label="Mood">
             <div className="flex flex-wrap gap-2 pt-2 min-h-[40px]">
-              {draft.moods?.map((m) => <Badge key={m} variant="secondary">{m}</Badge>)}
-              {!draft.moods?.length && <p className="text-sm text-muted-foreground">-</p>}
+              {metadata.moods?.map((m) => <Badge key={m} variant="secondary">{m}</Badge>)}
+              {!metadata.moods?.length && <p className="text-sm text-muted-foreground">-</p>}
             </div>
           </Field>
           <Field label="Genre">
             <div className="flex flex-wrap gap-2 pt-2 min-h-[40px]">
-              {draft.genre?.map((g) => <Badge key={g} variant="secondary">{g}</Badge>)}
-              {!draft.genre?.length && <p className="text-sm text-muted-foreground">-</p>}
+              {metadata.genre?.map((g) => <Badge key={g} variant="secondary">{g}</Badge>)}
+              {!metadata.genre?.length && <p className="text-sm text-muted-foreground">-</p>}
             </div>
           </Field>
         </div>
@@ -58,10 +60,10 @@ export function DraftTagsForm({ draft, onChange }: DraftTagsFormProps) {
         <SectionTitle>Instrument & Vocal</SectionTitle>
         <div className="grid grid-cols-2 gap-6">
           <Field label="Vocal Style">
-            <p className="text-sm h-10 flex items-center">{draft.vocal_type || "-"}</p>
+            <p className="text-sm h-10 flex items-center">{metadata.vocal_type || "-"}</p>
           </Field>
           <Field label="Instruments">
-            <p className="text-sm text-muted-foreground">{draft.instruments?.join(', ') || "-"}</p>
+            <p className="text-sm text-muted-foreground">{metadata.instruments?.join(', ') || "-"}</p>
           </Field>
         </div>
       </div>
@@ -70,10 +72,10 @@ export function DraftTagsForm({ draft, onChange }: DraftTagsFormProps) {
         <SectionTitle>Compositional Details</SectionTitle>
         <div className="grid grid-cols-2 gap-6">
           <Field label="Harmony">
-             <p className="text-sm h-10 flex items-center">{draft.harmony || "-"}</p>
+             <p className="text-sm h-10 flex items-center">{metadata.harmony || "-"}</p>
           </Field>
            <Field label="Chord Progression">
-             <p className="text-sm text-muted-foreground">{draft.chord_progression || "-"}</p>
+             <p className="text-sm text-muted-foreground">{metadata.chord_progression || "-"}</p>
           </Field>
         </div>
       </div>
@@ -82,13 +84,13 @@ export function DraftTagsForm({ draft, onChange }: DraftTagsFormProps) {
         <SectionTitle>Cultural & Lyrical Context</SectionTitle>
         <div className="grid grid-cols-2 gap-6">
           <Field label="Lyrical Theme">
-            <p className="text-sm h-10 flex items-center">{draft.lyrical_theme || "-"}</p>
+            <p className="text-sm h-10 flex items-center">{metadata.lyrical_theme || "-"}</p>
           </Field>
           <Field label="Cultural Fusion">
-            <p className="text-sm h-10 flex items-center">{draft.cultural_fusion || "-"}</p>
+            <p className="text-sm h-10 flex items-center">{metadata.cultural_fusion || "-"}</p>
           </Field>
           <Field label="Historical Period">
-            <p className="text-sm h-10 flex items-center">{draft.historical_period || "-"}</p>
+            <p className="text-sm h-10 flex items-center">{metadata.historical_period || "-"}</p>
           </Field>
         </div>
       </div>

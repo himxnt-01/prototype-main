@@ -5,21 +5,25 @@ import { TrackDetails } from "./metadata/sections/TrackDetails";
 import { ContentInfo } from "./metadata/sections/ContentInfo";
 
 interface DraftMetadataFormProps {
-  metadata: Draft["metadata"];
-  onChange: (metadata: Draft["metadata"]) => void;
+  draft: Draft;
+  onChange: (changes: Partial<Draft>) => void;
 }
 
-export function DraftMetadataForm({ metadata, onChange }: DraftMetadataFormProps) {
-  const handleChange = (key: keyof Draft["metadata"], value: any) => {
-    onChange({ ...metadata, [key]: value });
+export function DraftMetadataForm({ draft, onChange }: DraftMetadataFormProps) {
+  const handleChange = (changes: Partial<Draft>) => {
+    const newDraft = { ...draft, ...changes };
+    if (changes.metadata) {
+      newDraft.metadata = { ...(draft.metadata || {}), ...changes.metadata };
+    }
+    onChange(newDraft);
   };
 
   return (
-    <div className="space-y-8">
-      <BasicInfo metadata={metadata} onChange={handleChange} />
-      <CommercialInfo metadata={metadata} onChange={handleChange} />
-      <TrackDetails metadata={metadata} onChange={handleChange} />
-      <ContentInfo metadata={metadata} onChange={handleChange} />
+    <div className="space-y-8 p-6">
+      <BasicInfo draft={draft} onChange={handleChange} />
+      <CommercialInfo draft={draft} onChange={handleChange} />
+      <TrackDetails draft={draft} onChange={handleChange} />
+      <ContentInfo draft={draft} onChange={handleChange} />
     </div>
   );
 }

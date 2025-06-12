@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { FormField } from "../FormField";
+import { FormField } from "./FormField";
 import { Disc3, Timer, Music2, Clock } from "lucide-react";
 import { Draft } from "@/types/draft";
 import { Badge } from "@/components/ui/badge";
@@ -10,18 +10,18 @@ interface TrackDetailsProps {
 }
 
 export function TrackDetails({ draft, onChange }: TrackDetailsProps) {
-  const handleChange = (key: keyof Draft, value: any) => {
-    onChange({ [key]: value });
+  const handleChange = (key: keyof Draft['metadata'], value: any) => {
+    onChange({ metadata: { ...draft.metadata, [key]: value } });
   };
 
   return (
     <div className="grid grid-cols-2 gap-6">
       <FormField label="Genre" icon={Disc3}>
         <div className="flex flex-wrap gap-2 pt-2">
-          {draft.genre?.map((g) => (
+          {draft.metadata?.genre?.map((g) => (
             <Badge key={g} variant="secondary">{g}</Badge>
           ))}
-          {!draft.genre?.length && <p className="text-sm text-muted-foreground">No genre specified</p>}
+          {!draft.metadata?.genre?.length && <p className="text-sm text-muted-foreground">No genre specified</p>}
         </div>
       </FormField>
 
@@ -29,7 +29,7 @@ export function TrackDetails({ draft, onChange }: TrackDetailsProps) {
         <Input
           type="number"
           placeholder="e.g., 120"
-          value={draft.bpm || ""}
+          value={draft.metadata?.bpm || ""}
           onChange={(e) => handleChange("bpm", parseInt(e.target.value))}
         />
       </FormField>
@@ -37,7 +37,7 @@ export function TrackDetails({ draft, onChange }: TrackDetailsProps) {
       <FormField label="Key" icon={Music2}>
         <Input
           placeholder="e.g., Am"
-          value={draft.key || ""}
+          value={draft.metadata?.key || ""}
           onChange={(e) => handleChange("key", e.target.value)}
         />
       </FormField>
@@ -45,7 +45,7 @@ export function TrackDetails({ draft, onChange }: TrackDetailsProps) {
       <FormField label="Duration" icon={Clock}>
         <Input
           placeholder="e.g., 3:45"
-          value={""}
+          value={draft.metadata?.duration || ""}
           readOnly
         />
       </FormField>

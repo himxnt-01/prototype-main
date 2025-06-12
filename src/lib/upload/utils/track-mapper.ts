@@ -1,81 +1,26 @@
 // src/lib/upload/utils/track-mapper.ts
 
-import { Track, TrackMetadata, SyncLicensingInfo } from '@/types/track';
+import { Draft } from '@/types/draft';
 
 /**
- * Maps raw Supabase track data to the local application's `Track` interface.
- * This function provides default/placeholder values for properties that are
- * required by the local `Track` interface but might not be immediately
- * available from the initial Supabase database insert.
+ * Maps a raw Supabase track object (from the database) to the local 
+ * application's `Draft` interface. This function is now schema-aware.
  *
- * @param supabaseTrackData The data object returned from a successful Supabase `tracks` table insert.
- * @returns A `Track` object that conforms to the local application's `Track` interface.
+ * @param supabaseTrackData The data object from the Supabase `tracks` table.
+ * @returns A `Draft` object that conforms to the application's `Draft` interface.
  */
-export const mapSupabaseTrackToLocalTrack = (supabaseTrackData: any): Track => {
-  // Default values for TrackMetadata properties
-  const defaultMetadata: TrackMetadata = {
-    isrc: undefined,
-    iswc: undefined,
-    upc: undefined,
-    releaseDate: new Date().toISOString().split('T')[0],
-    publisher: "Unknown Publisher",
-    copyright: `© ${new Date().getFullYear()} Unknown`,
-    producer: "Unknown Producer",
-    mixer: "Unknown Mixer",
-    masteringEngineer: "Unknown Mastering Engineer",
-    recordingLocation: "Unknown Location",
-    recordingDate: new Date().toISOString().split('T')[0],
-    language: "English",
-    explicit: false,
-    territories: ["Worldwide"],
-    masterRightsOwner: "Unknown Owner",
-  };
-
-  // Default values for SyncLicensingInfo properties (if needed)
-  const defaultSyncInfo: SyncLicensingInfo = {
-    mood: [],
-    instruments: [],
-    tempo: "medium",
-    energy: "medium",
-    vocals: "none",
-    explicit: false,
-    genres: [],
-    subgenres: [],
-    similar: [],
-    themes: [],
-    clearance: {
-      masterRights: "Unspecified",
-      publishingRights: "Unspecified",
-      territorialRestrictions: [],
-      preClearedFor: [],
-      restrictions: [],
-    },
-    pricing: [],
-  };
-
-  // Construct the status object, ensuring all required sub-properties are present
-  const status = {
-    phase: supabaseTrackData.status?.phase || "recording",
-    clearance: supabaseTrackData.status?.clearance || { industries: [], restrictedCountries: [] },
-    monetization: supabaseTrackData.status?.monetization ?? false,
-    public: supabaseTrackData.status?.public ?? false,
-    approvals: supabaseTrackData.status?.approvals || [],
-    progress: supabaseTrackData.status?.progress || 0,
-  };
-
-  return {
-    // Core Draft fields from Supabase
-    id: supabaseTrackData.id,
-    created_at: supabaseTrackData.created_at || new Date().toISOString(),
-    updated_at: supabaseTrackData.updated_at,
-    title: supabaseTrackData.title || "Untitled Track",
-    user_id: supabaseTrackData.user_id,
-    audio_url: supabaseTrackData.audio_url || "",
-    is_published: supabaseTrackData.is_published ?? false,
-    analysis_status: supabaseTrackData.analysis_status,
-    error_message: supabaseTrackData.error_message,
-    
-    // Gemini Analysis Fields (with defaults)
+export const mapSupabaseTrackToDraft = (supabaseTrackData: any): Draft => {
+  // The 'artist' field in the UI/draft object is a string name, but the database
+  // stores an 'artist_id'. This mapping function does not have enough context
+  // to fetch the artist's name from the 'profiles' table.
+  // For now, we will leave it undefined or use a placeholder. The UI components
+  // will need to handle fetching the artist name based on `user_id`.
+  // Note: The database has `artist_id`, which seems to be the `user_id`. We use `user_id`.
+  
+  const metadata = {
+    title: supabaseTrackData.title,
+    // artist: We need a separate mechanism to resolve user_id to an artist name
+    duration: supabaseTrackData.duration,
     bpm: supabaseTrackData.bpm,
     key: supabaseTrackData.key,
     genre: supabaseTrackData.genre,
@@ -92,24 +37,35 @@ export const mapSupabaseTrackToLocalTrack = (supabaseTrackData: any): Track => {
     lyrical_theme: supabaseTrackData.lyrical_theme,
     cultural_fusion: supabaseTrackData.cultural_fusion,
     historical_period: supabaseTrackData.historical_period,
-    
-    // Legacy/UI fields (mapped or with defaults)
-    artist: supabaseTrackData.user_id || "Unknown Artist",
-    lastModified: supabaseTrackData.updated_at || supabaseTrackData.created_at,
+    lyrics: supabaseTrackData.lyrics, // From the new top-level column
+  };
 
-    duration: supabaseTrackData.duration || "0:00",
-    metadata: {
-      ...defaultMetadata,
-      ...supabaseTrackData.metadata,
-    },
-    tags: supabaseTrackData.tags || [],
-    writers: supabaseTrackData.writers || [],
-    lyrics: supabaseTrackData.lyrics || "",
+  return {
+    id: supabaseTrackData.id,
+    user_id: supabaseTrackData.user_id || supabaseTrackData.artist_id, // Use user_id as the primary source
+    
+    title: supabaseTrackData.title || 'Untitled',
+    artist: 'Unknown Artist', // Placeholder, needs proper fetching logic
+    audio_url: supabaseTrackData.audio_url,
+    cover_art_url: supabaseTrackData.cover_art_url,
+    
+    metadata: metadata,
+
+    rights: supabaseTrackData.rights,
+    lyrics: supabaseTrackData.lyrics || { content: '' },
+    tags: supabaseTrackData.tags,
+
+    status: supabaseTrackData.status || { phase: 'draft', clearance: false, monetization: false, public: false, flags: [] },
+    is_published: supabaseTrackData.is_published ?? false,
+    analysis_status: supabaseTrackData.analysis_status || 'pending',
+    error_message: supabaseTrackData.error_message,
 
     mixes: supabaseTrackData.mixes,
-    parentTrackId: supabaseTrackData.parentTrackId,
-    syncInfo: supabaseTrackData.syncInfo || defaultSyncInfo,
-    status: status,
-    rights: supabaseTrackData.rights || { writers: [], publishers: [], masterOwners: [] },
+    licensing: supabaseTrackData.licensing,
+
+    created_at: supabaseTrackData.created_at || new Date().toISOString(),
+    updated_at: supabaseTrackData.updated_at,
+    lastModified: supabaseTrackData.updated_at || supabaseTrackData.created_at || new Date().toISOString(),
+    progress: 0, 
   };
 };
